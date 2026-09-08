@@ -42,7 +42,7 @@ func configFile(t *testing.T, name string) string {
 }
 
 // repoRoot is the directory the config directory's refs are written relative
-// to. Refs like `quality-reports/2026-08-08-nested-loop-review.md` are written
+// to. Refs like `reviews/2026-08-08-nested-loop-review.md` are written
 // from the repository root because that is where a reader opens them, so the
 // parent of the config directory is what resolves them.
 func repoRoot(t *testing.T) string {

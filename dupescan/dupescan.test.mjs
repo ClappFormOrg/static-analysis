@@ -47,20 +47,20 @@ const src = entries => entries.map(([file, text]) => [file, stripComments(text)]
 
 test('duplicate exports: one name declared by two modules is reported', () => {
   const found = checkDuplicateExports(src([
-    ['app/utils/api/jwt.ts', 'export function decodeExp(t: string) { return 1 }'],
-    ['server/utils/auth-cookies.ts', 'export function decodeExp(t: string) { return 2 }'],
+    ['app/utils/api/jwt.ts', 'export function decodeToken(t: string) { return 1 }'],
+    ['server/utils/cart-cookies.ts', 'export function decodeToken(t: string) { return 2 }'],
   ]))
   assert.equal(found.length, 1)
-  assert.equal(found[0].name, 'decodeExp')
-  assert.deepEqual(found[0].files, ['app/utils/api/jwt.ts', 'server/utils/auth-cookies.ts'])
+  assert.equal(found[0].name, 'decodeToken')
+  assert.deepEqual(found[0].files, ['app/utils/api/jwt.ts', 'server/utils/cart-cookies.ts'])
 })
 
 test('duplicate exports: a re-export is not a second declaration', () => {
   // The shape F10 ended up in: one declaration in shared/, forwarded by both sides.
   const found = checkDuplicateExports(src([
-    ['shared/auth-session.ts', `export const SESSION_COOKIE = 'app-auth-session'`],
-    ['app/composables/access/useAuth.ts', 'export { SESSION_COOKIE }'],
-    ['server/utils/auth-cookies.ts', 'export { SESSION_COOKIE }'],
+    ['shared/cart-token.ts', `export const CART_COOKIE = 'app-cart-token'`],
+    ['app/composables/access/useCart.ts', 'export { CART_COOKIE }'],
+    ['server/utils/cart-cookies.ts', 'export { CART_COOKIE }'],
   ]))
   assert.deepEqual(found, [])
 })
@@ -75,12 +75,12 @@ test('duplicate exports: a symbol named only in a comment does not count', () =>
 
 test('duplicate literal consts: one value under two names in two files is reported', () => {
   const found = checkDuplicateLiteralConsts(src([
-    ['app/composables/access/useAuth.ts', `export const SESSION_KEY = 'app-auth-session'`],
-    ['server/utils/auth-cookies.ts', `export const SESSION_COOKIE = 'app-auth-session'`],
+    ['app/composables/access/useCart.ts', `export const CART_KEY = 'app-cart-token'`],
+    ['server/utils/cart-cookies.ts', `export const CART_COOKIE = 'app-cart-token'`],
   ]))
   assert.equal(found.length, 1)
-  assert.equal(found[0].value, 'app-auth-session')
-  assert.deepEqual(found[0].sites.map(s => s.name), ['SESSION_KEY', 'SESSION_COOKIE'])
+  assert.equal(found[0].value, 'app-cart-token')
+  assert.deepEqual(found[0].sites.map(s => s.name), ['CART_KEY', 'CART_COOKIE'])
 })
 
 test('duplicate literal consts: a short value is not worth reporting', () => {
@@ -94,8 +94,8 @@ test('duplicate literal consts: a short value is not worth reporting', () => {
 
 test('duplicate literal consts: the same name re-exported is not two values', () => {
   const found = checkDuplicateLiteralConsts(src([
-    ['shared/k.ts', `export const SESSION_COOKIE = 'app-auth-session'`],
-    ['app/re.ts', 'export { SESSION_COOKIE }'],
+    ['shared/k.ts', `export const CART_COOKIE = 'app-cart-token'`],
+    ['app/re.ts', 'export { CART_COOKIE }'],
   ]))
   assert.deepEqual(found, [])
 })
@@ -121,11 +121,11 @@ test('duplicate literal consts: an unexported const holds a value just as loudly
 
 test('duplicate literal consts: a backtick literal is a value when it has no substitution', () => {
   const found = checkDuplicateLiteralConsts(src([
-    ['a.ts', 'export const K = `app-auth-session`'],
-    ['b.ts', `const J = 'app-auth-session'`],
+    ['a.ts', 'export const K = `app-cart-token`'],
+    ['b.ts', `const J = 'app-cart-token'`],
   ]))
   assert.equal(found.length, 1)
-  assert.equal(found[0].value, 'app-auth-session')
+  assert.equal(found[0].value, 'app-cart-token')
 })
 
 test('duplicate literal consts: a template with a substitution is a recipe, not a value', () => {
@@ -175,14 +175,14 @@ test('duplicate exports: a default parameter is not a second declarator', () => 
 
 test('duplicate unions: the same member set counts however it is written or ordered', () => {
   const { exact } = checkDuplicateUnions(src([
-    ['app/utils/review-state.ts', `export type ReviewBadgeVariant = 'gray' | 'success' | 'violet'`],
+    ['app/utils/invoice-state.ts', `export type InvoiceBadgeVariant = 'gray' | 'success' | 'violet'`],
     ['app/types/review.ts', `  variant: 'violet' | 'gray' | 'success'`],
   ]))
   assert.equal(exact.length, 1)
   assert.equal(exact[0].sites.length, 2)
   assert.deepEqual(
     exact[0].sites.map(s => s.label).sort(),
-    ['ReviewBadgeVariant', 'variant'],
+    ['InvoiceBadgeVariant', 'variant'],
   )
 })
 
@@ -198,8 +198,8 @@ test('duplicate unions: a narrower copy surfaces as a subset, naming what it lac
   // The F2 failure: a copy that fell behind cannot match exactly, so the exact check
   // is blind to precisely the drift that matters.
   const { exact, subsets } = checkDuplicateUnions(src([
-    ['app/components/UiBadge.vue.ts', `type Variant = 'gray' | 'success' | 'violet' | 'teal'`],
-    ['app/utils/approvals-status.ts', `export type StatusBadgeVariant = 'gray' | 'success' | 'violet'`],
+    ['app/components/AppBadge.vue.ts', `type Variant = 'gray' | 'success' | 'violet' | 'teal'`],
+    ['app/utils/order-status.ts', `export type OrderBadgeVariant = 'gray' | 'success' | 'violet'`],
   ]))
   assert.deepEqual(exact, [])
   assert.equal(subsets.length, 1)
@@ -242,13 +242,13 @@ test('duplicate interfaces: a type alias and an interface are the same record', 
   // The four card-option types sharing `{value, label, icon, description}` are a mix of
   // both forms.
   const found = checkDuplicateInterfaces(src([
-    ['app/components/forms/molecules/UiCardSelect.vue', `export type CardSelectOption = {
+    ['app/components/forms/molecules/AppCardSelect.vue', `export type CardSelectOption = {
       value: string
       label: string
       icon: string
       description: string
     }`],
-    ['app/types/access.ts', `export interface ApproverTypeOption {
+    ['app/types/payment.ts', `export interface PaymentTypeOption {
       value: string
       label: string
       icon: string
@@ -256,7 +256,7 @@ test('duplicate interfaces: a type alias and an interface are the same record', 
     }`],
   ]))
   assert.equal(found.length, 1)
-  assert.deepEqual(found[0].sites.map(s => s.name), ['CardSelectOption', 'ApproverTypeOption'])
+  assert.deepEqual(found[0].sites.map(s => s.name), ['CardSelectOption', 'PaymentTypeOption'])
 })
 
 test('duplicate interfaces: a record written on ONE line keeps its last field', () => {
@@ -302,7 +302,7 @@ type Variant = 'gray' | 'success' | 'violet'
 test('vue: both script blocks contribute', () => {
   // A component may pair `<script setup>` with a plain `<script>` for a name/option.
   const sfc = `<script lang="ts">
-export const COMPONENT_NAME = 'UiBadge'
+export const COMPONENT_NAME = 'AppBadge'
 </script>
 <script setup lang="ts">
 type Variant = 'gray' | 'success'
@@ -320,15 +320,15 @@ test('vue: an SFC union is compared against a .ts one - the F2 case', () => {
   // The palette copies lived in SFC script blocks and in .ts files, so a scan that
   // read only .ts reported none of them.
   const { exact } = checkDuplicateUnions(src([
-    ['app/components/UiBadge.vue', extractVueScript(`<script setup lang="ts">
+    ['app/components/AppBadge.vue', extractVueScript(`<script setup lang="ts">
 type Variant = 'gray' | 'success' | 'violet'
 </script>`)],
-    ['app/utils/review-state.ts', `export type ReviewBadgeVariant = 'gray' | 'success' | 'violet'`],
+    ['app/utils/invoice-state.ts', `export type InvoiceBadgeVariant = 'gray' | 'success' | 'violet'`],
   ]))
   assert.equal(exact.length, 1)
   assert.deepEqual(exact[0].sites.map(s => s.file).sort(), [
-    'app/components/UiBadge.vue',
-    'app/utils/review-state.ts',
+    'app/components/AppBadge.vue',
+    'app/utils/invoice-state.ts',
   ])
 })
 
@@ -354,19 +354,19 @@ test('duplicate interfaces: a nested object type does not become its own record'
 
 test('go funcs: one helper restated in four packages is reported, naming every file', () => {
   const found = checkDuplicateGoFuncs(src([
-    ['api/internal/service/invoice/helpers.go', 'func decodeCursor(s string) (string, error) {\n\treturn s, nil\n}'],
-    ['api/internal/service/widget/helpers.go', 'func decodeCursor(s string) (string, error) {\n\treturn s, nil\n}'],
-    ['api/internal/service/order/read.go', 'func decodeCursor(c string) (string, error) {\n\treturn c, nil\n}'],
-    ['api/internal/service/comment/comment.go', 'func decodeCursor(v string) (string, error) {\n\treturn v, nil\n}'],
+    ['internal/service/invoice/helpers.go', 'func decodeCursor(s string) (string, error) {\n\treturn s, nil\n}'],
+    ['internal/service/widget/helpers.go', 'func decodeCursor(s string) (string, error) {\n\treturn s, nil\n}'],
+    ['internal/service/order/read.go', 'func decodeCursor(c string) (string, error) {\n\treturn c, nil\n}'],
+    ['internal/service/comment/comment.go', 'func decodeCursor(v string) (string, error) {\n\treturn v, nil\n}'],
   ]))
   assert.equal(found.length, 1)
   assert.equal(found[0].name, 'decodeCursor')
   assert.equal(found[0].packages, 4)
   assert.deepEqual(found[0].files, [
-    'api/internal/service/comment/comment.go',
-    'api/internal/service/invoice/helpers.go',
-    'api/internal/service/order/read.go',
-    'api/internal/service/widget/helpers.go',
+    'internal/service/comment/comment.go',
+    'internal/service/invoice/helpers.go',
+    'internal/service/order/read.go',
+    'internal/service/widget/helpers.go',
   ])
 })
 
@@ -374,9 +374,9 @@ test('go funcs: three packages is below the floor', () => {
   // Two or three packages naming a short helper alike is as likely convention as
   // concept. Four is where the API's real cases start.
   const found = checkDuplicateGoFuncs(src([
-    ['api/internal/service/a/a.go', 'func codeOf(err error) int { return 0 }'],
-    ['api/internal/service/b/b.go', 'func codeOf(err error) int { return 0 }'],
-    ['api/internal/service/c/c.go', 'func codeOf(err error) int { return 0 }'],
+    ['internal/service/a/a.go', 'func codeOf(err error) int { return 0 }'],
+    ['internal/service/b/b.go', 'func codeOf(err error) int { return 0 }'],
+    ['internal/service/c/c.go', 'func codeOf(err error) int { return 0 }'],
   ]))
   assert.deepEqual(found, [])
 })
@@ -386,11 +386,11 @@ test('go funcs: an exported constructor in every package is convention, not dupl
   // put Go's constructor idiom at the top of the report, and a detector whose loudest
   // finding is noise gets skimmed.
   const found = checkDuplicateGoFuncs(src([
-    ['api/internal/service/invoice/invoice.go', 'func New(db *gorm.DB) *Service { return nil }'],
-    ['api/internal/service/widget/widget.go', 'func New(db *gorm.DB) *Service { return nil }'],
-    ['api/internal/service/comment/comment.go', 'func New(db *gorm.DB) *Service { return nil }'],
-    ['api/internal/service/order/order.go', 'func New(db *gorm.DB) *Service { return nil }'],
-    ['api/internal/service/terms/terms.go', 'func New(db *gorm.DB) *Service { return nil }'],
+    ['internal/service/invoice/invoice.go', 'func New(db *gorm.DB) *Service { return nil }'],
+    ['internal/service/widget/widget.go', 'func New(db *gorm.DB) *Service { return nil }'],
+    ['internal/service/comment/comment.go', 'func New(db *gorm.DB) *Service { return nil }'],
+    ['internal/service/order/order.go', 'func New(db *gorm.DB) *Service { return nil }'],
+    ['internal/service/pricing/pricing.go', 'func New(db *gorm.DB) *Service { return nil }'],
   ]))
   assert.deepEqual(found, [])
 })
@@ -400,10 +400,10 @@ test('go funcs: a method is not a package-level function of the same name', () =
   // its receiver. Folding methods in also surfaces `resolve` on `*Resolver` and on
   // `*boundSet`, which are unrelated.
   const found = checkDuplicateGoFuncs(src([
-    ['api/internal/service/invoice/invoice.go', 'func (s *Service) withTx(ctx context.Context) error { return nil }'],
-    ['api/internal/service/widget/widget.go', 'func (s *Service) withTx(ctx context.Context) error { return nil }'],
-    ['api/internal/service/comment/comment.go', 'func (s *Service) withTx(ctx context.Context) error { return nil }'],
-    ['api/internal/service/draft/promote.go', 'func (p *Promoter) withTx(ctx context.Context) error { return nil }'],
+    ['internal/service/invoice/invoice.go', 'func (s *Service) withTx(ctx context.Context) error { return nil }'],
+    ['internal/service/widget/widget.go', 'func (s *Service) withTx(ctx context.Context) error { return nil }'],
+    ['internal/service/comment/comment.go', 'func (s *Service) withTx(ctx context.Context) error { return nil }'],
+    ['internal/service/report/publish.go', 'func (p *Promoter) withTx(ctx context.Context) error { return nil }'],
   ]))
   assert.deepEqual(found, [])
 })
@@ -412,10 +412,10 @@ test('go funcs: two files in ONE package are one declaration site', () => {
   // Build-tagged halves of a package are not two packages, and Go forbids a package
   // declaring the same function twice anyway. Four files, two packages, no finding.
   const found = checkDuplicateGoFuncs(src([
-    ['api/internal/service/widget/sweep_linux.go', 'func sweep(ctx context.Context) error { return nil }'],
-    ['api/internal/service/widget/sweep_windows.go', 'func sweep(ctx context.Context) error { return nil }'],
-    ['api/internal/service/comment/sweep_linux.go', 'func sweep(ctx context.Context) error { return nil }'],
-    ['api/internal/service/comment/sweep_windows.go', 'func sweep(ctx context.Context) error { return nil }'],
+    ['internal/service/widget/sweep_linux.go', 'func sweep(ctx context.Context) error { return nil }'],
+    ['internal/service/widget/sweep_windows.go', 'func sweep(ctx context.Context) error { return nil }'],
+    ['internal/service/comment/sweep_linux.go', 'func sweep(ctx context.Context) error { return nil }'],
+    ['internal/service/comment/sweep_windows.go', 'func sweep(ctx context.Context) error { return nil }'],
   ]))
   assert.deepEqual(found, [])
 })
@@ -423,12 +423,12 @@ test('go funcs: two files in ONE package are one declaration site', () => {
 test('go funcs: copies that disagree on argument count are re-implementations', () => {
   // The real `displayName`: `(*store.User)`, `(first, last string)` and
   // `(store.UserDisplay)`. Three answers to one question, sharing no tokens, so no
-  // clone detector reaches it at any threshold - the `decodeExp` shape on the Go side.
+  // clone detector reaches it at any threshold - the `decodeToken` shape on the Go side.
   const found = checkDuplicateGoFuncs(src([
-    ['api/internal/service/request/access_grants.go', 'func displayName(u *store.User) string { return "" }'],
-    ['api/internal/service/identity/notify.go', 'func displayName(first, last string) string { return "" }'],
-    ['api/internal/service/account/names.go', 'func displayName(d store.UserDisplay) string { return "" }'],
-    ['api/internal/service/widget/names.go', 'func displayName(u *store.User) string { return "" }'],
+    ['internal/service/shipping/rates.go', 'func displayName(u *store.User) string { return "" }'],
+    ['internal/service/catalog/notify.go', 'func displayName(first, last string) string { return "" }'],
+    ['internal/service/billing/names.go', 'func displayName(d store.UserDisplay) string { return "" }'],
+    ['internal/service/widget/names.go', 'func displayName(u *store.User) string { return "" }'],
   ]))
   assert.equal(found.length, 1)
   assert.equal(found[0].reimplemented, true)
@@ -439,10 +439,10 @@ test('go funcs: renamed parameters at the same arity are copies, not re-implemen
   // Comparing signature TEXT would call every finding a re-implementation and the
   // signal would mean nothing.
   const found = checkDuplicateGoFuncs(src([
-    ['api/internal/service/invoice/mask.go', 'func hasPath(paths []string, p string) bool { return false }'],
-    ['api/internal/service/widget/mask.go', 'func hasPath(fm []string, want string) bool { return false }'],
-    ['api/internal/service/comment/mask.go', 'func hasPath(list []string, target string) bool { return false }'],
-    ['api/internal/service/order/mask.go', 'func hasPath(fields []string, name string) bool { return false }'],
+    ['internal/service/invoice/mask.go', 'func hasPath(paths []string, p string) bool { return false }'],
+    ['internal/service/widget/mask.go', 'func hasPath(fm []string, want string) bool { return false }'],
+    ['internal/service/comment/mask.go', 'func hasPath(list []string, target string) bool { return false }'],
+    ['internal/service/order/mask.go', 'func hasPath(fields []string, name string) bool { return false }'],
   ]))
   assert.equal(found.length, 1)
   assert.equal(found[0].reimplemented, false)
@@ -450,10 +450,10 @@ test('go funcs: renamed parameters at the same arity are copies, not re-implemen
 
 test('go funcs: generic and zero-argument declarations are counted correctly', () => {
   const found = checkDuplicateGoFuncs(src([
-    ['api/internal/service/a/a.go', 'func meta() context.Context { return nil }'],
-    ['api/internal/service/b/b.go', 'func meta() context.Context { return nil }'],
-    ['api/internal/service/c/c.go', 'func meta() context.Context { return nil }'],
-    ['api/internal/service/d/d.go', 'func meta[T any]() context.Context { return nil }'],
+    ['internal/service/a/a.go', 'func meta() context.Context { return nil }'],
+    ['internal/service/b/b.go', 'func meta() context.Context { return nil }'],
+    ['internal/service/c/c.go', 'func meta() context.Context { return nil }'],
+    ['internal/service/d/d.go', 'func meta[T any]() context.Context { return nil }'],
   ]))
   assert.equal(found.length, 1)
   assert.equal(found[0].packages, 4)
@@ -465,10 +465,10 @@ test('go funcs: a constraint over a composite type is still a declaration', () =
   // A type-parameter list matched as `[^\]]*` stops at the `]` of `[string]`, so the
   // whole declaration was missed rather than mismeasured.
   const found = checkDuplicateGoFuncs(src([
-    ['api/internal/service/a/a.go', 'func decodeSealedJSON[M ~map[string]V, V any](j datatypes.JSON) M { return nil }'],
-    ['api/internal/service/b/b.go', 'func decodeSealedJSON[M ~map[string]V, V any](j datatypes.JSON) M { return nil }'],
-    ['api/internal/service/c/c.go', 'func decodeSealedJSON[M ~map[string]V, V any](j datatypes.JSON) M { return nil }'],
-    ['api/internal/service/d/d.go', 'func decodeSealedJSON[M ~map[string]V, V any](j datatypes.JSON) M { return nil }'],
+    ['internal/service/a/a.go', 'func decodeSealedJSON[M ~map[string]V, V any](j datatypes.JSON) M { return nil }'],
+    ['internal/service/b/b.go', 'func decodeSealedJSON[M ~map[string]V, V any](j datatypes.JSON) M { return nil }'],
+    ['internal/service/c/c.go', 'func decodeSealedJSON[M ~map[string]V, V any](j datatypes.JSON) M { return nil }'],
+    ['internal/service/d/d.go', 'func decodeSealedJSON[M ~map[string]V, V any](j datatypes.JSON) M { return nil }'],
   ]))
   assert.equal(found.length, 1)
   assert.equal(found[0].packages, 4)
@@ -477,20 +477,20 @@ test('go funcs: a constraint over a composite type is still a declaration', () =
 
 test('go funcs: a nested func parameter is one argument, not two', () => {
   const found = checkDuplicateGoFuncs(src([
-    ['api/internal/service/a/a.go', 'func runInTx(fn func(tx *gorm.DB, id uuid.UUID) error) error { return nil }'],
-    ['api/internal/service/b/b.go', 'func runInTx(f func(db *gorm.DB, u uuid.UUID) error) error { return nil }'],
-    ['api/internal/service/c/c.go', 'func runInTx(cb func(tx *gorm.DB, x uuid.UUID) error) error { return nil }'],
-    ['api/internal/service/d/d.go', 'func runInTx(fn func(tx *gorm.DB, id uuid.UUID) error) error { return nil }'],
+    ['internal/service/a/a.go', 'func runInTx(fn func(tx *gorm.DB, id uuid.UUID) error) error { return nil }'],
+    ['internal/service/b/b.go', 'func runInTx(f func(db *gorm.DB, u uuid.UUID) error) error { return nil }'],
+    ['internal/service/c/c.go', 'func runInTx(cb func(tx *gorm.DB, x uuid.UUID) error) error { return nil }'],
+    ['internal/service/d/d.go', 'func runInTx(fn func(tx *gorm.DB, id uuid.UUID) error) error { return nil }'],
   ]))
   assert.equal(found[0].reimplemented, false)
 })
 
 test('go funcs: a name that only appears in a comment does not count', () => {
   const found = checkDuplicateGoFuncs(src([
-    ['api/internal/service/a/a.go', 'func meta() int { return 1 }'],
-    ['api/internal/service/b/b.go', 'func meta() int { return 1 }'],
-    ['api/internal/service/c/c.go', 'func meta() int { return 1 }'],
-    ['api/internal/service/d/d.go', '// func meta() int - moved to svcutil\nfunc other() int { return 1 }'],
+    ['internal/service/a/a.go', 'func meta() int { return 1 }'],
+    ['internal/service/b/b.go', 'func meta() int { return 1 }'],
+    ['internal/service/c/c.go', 'func meta() int { return 1 }'],
+    ['internal/service/d/d.go', '// func meta() int - moved to svcutil\nfunc other() int { return 1 }'],
   ]))
   assert.deepEqual(found, [])
 })
@@ -499,10 +499,10 @@ test('go funcs: a file that does not compile is still scanned', () => {
   // The tool resolves no packages and parses nothing, so a half-written branch reports
   // the same as a green one. That is the property that lets it run pre-commit.
   const found = checkDuplicateGoFuncs(src([
-    ['api/internal/service/a/a.go', 'func meta() int { return 1 }'],
-    ['api/internal/service/b/b.go', 'func meta() int { return 1 }'],
-    ['api/internal/service/c/c.go', 'func meta() int { return 1 }'],
-    ['api/internal/service/d/d.go', 'import "fmt"\n\nfunc meta() int {\n\tif x == { // unbalanced, mid-edit\n'],
+    ['internal/service/a/a.go', 'func meta() int { return 1 }'],
+    ['internal/service/b/b.go', 'func meta() int { return 1 }'],
+    ['internal/service/c/c.go', 'func meta() int { return 1 }'],
+    ['internal/service/d/d.go', 'import "fmt"\n\nfunc meta() int {\n\tif x == { // unbalanced, mid-edit\n'],
   ]))
   assert.equal(found.length, 1)
   assert.equal(found[0].packages, 4)
@@ -512,21 +512,21 @@ test('go funcs: a half-typed signature does not invent an argument count', () =>
   // Counting to end-of-file through an unclosed parameter list would give the fourth
   // copy an arity of its own and report four identical helpers as re-implementations.
   const found = checkDuplicateGoFuncs(src([
-    ['api/internal/service/a/a.go', 'func meta(ctx context.Context) int { return 1 }'],
-    ['api/internal/service/b/b.go', 'func meta(ctx context.Context) int { return 1 }'],
-    ['api/internal/service/c/c.go', 'func meta(ctx context.Context) int { return 1 }'],
-    ['api/internal/service/d/d.go', 'func meta(ctx context.Context, extra'],
+    ['internal/service/a/a.go', 'func meta(ctx context.Context) int { return 1 }'],
+    ['internal/service/b/b.go', 'func meta(ctx context.Context) int { return 1 }'],
+    ['internal/service/c/c.go', 'func meta(ctx context.Context) int { return 1 }'],
+    ['internal/service/d/d.go', 'func meta(ctx context.Context, extra'],
   ]))
   assert.equal(found.length, 1)
   assert.equal(found[0].reimplemented, false)
 })
 
 test('go: .go is scanned and _test.go is not', () => {
-  // `adminCtx` and `ctxAs` are declared in 8 and 7 packages, all of them `_test.go`.
+  // A Go codebase's test helpers are routinely declared once per `_test.go` package.
   // They are test scaffolding, and reporting them would bury the production findings.
   assert.equal(isScanned('helpers.go'), true)
-  assert.equal(isTestPath('api/internal/service/widget/widget_test.go'), true)
-  assert.equal(isTestPath('api/internal/service/widget/widget.go'), false)
+  assert.equal(isTestPath('internal/service/widget/widget_test.go'), true)
+  assert.equal(isTestPath('internal/service/widget/widget.go'), false)
 })
 
 // --- severity ---------------------------------------------------------------
@@ -537,12 +537,12 @@ test('go: .go is scanned and _test.go is not', () => {
 
 test('severity: a duplicated VALUE across app/server is the worst case', () => {
   const value = finding('value', [
-    ['webapp/app/composables/access/useAuth.ts', 'SESSION_KEY'],
-    ['webapp/server/utils/auth-cookies.ts', 'SESSION_COOKIE'],
+    ['app/composables/access/useCart.ts', 'CART_KEY'],
+    ['server/utils/cart-cookies.ts', 'CART_COOKIE'],
   ])
   const union = finding('union', [
-    ['webapp/app/types/a.ts', 'A'],
-    ['webapp/app/types/b.ts', 'B'],
+    ['app/types/a.ts', 'A'],
+    ['app/types/b.ts', 'B'],
   ])
   assert.equal(value.level, 'HIGH')
   assert.ok(value.score > union.score)
@@ -550,12 +550,12 @@ test('severity: a duplicated VALUE across app/server is the worst case', () => {
 
 test('severity: an auto-imported name collision outranks one outside that scope', () => {
   const auto = finding('name', [
-    ['webapp/app/composables/data/useX.ts', 'useX'],
-    ['webapp/app/composables/pages/useY.ts', 'useX'],
+    ['app/composables/useX.ts', 'useX'],
+    ['app/composables/pages/useY.ts', 'useX'],
   ])
   const explicit = finding('name', [
-    ['webapp/app/components/a/A.vue', 'Thing'],
-    ['webapp/app/components/b/B.vue', 'Thing'],
+    ['app/components/a/A.vue', 'Thing'],
+    ['app/components/b/B.vue', 'Thing'],
   ])
   assert.ok(auto.score > explicit.score)
   assert.match(auto.why.join(' '), /auto-import/)
@@ -563,12 +563,12 @@ test('severity: an auto-imported name collision outranks one outside that scope'
 
 test('severity: two declarations in ONE file rank below the same thing across files', () => {
   const oneFile = finding('union', [
-    ['webapp/app/components/media/atoms/UiMap.vue', 'MapVariant'],
-    ['webapp/app/components/media/atoms/UiMap.vue', 'variant'],
+    ['app/components/media/atoms/AppMap.vue', 'MapVariant'],
+    ['app/components/media/atoms/AppMap.vue', 'variant'],
   ])
   const twoFiles = finding('union', [
-    ['webapp/app/components/media/atoms/UiMap.vue', 'MapVariant'],
-    ['webapp/app/utils/map-tiles.ts', 'MapVariant'],
+    ['app/components/media/atoms/AppMap.vue', 'MapVariant'],
+    ['app/utils/map-tiles.ts', 'MapVariant'],
   ])
   assert.ok(oneFile.score < twoFiles.score)
   assert.match(oneFile.why.join(' '), /ONE file/)
@@ -580,7 +580,7 @@ test('severity: the copy-count ladder scales the cost, and only above two copies
   // ever overtaking a factor that is about silence. The pair is deliberately the
   // quiet case: components/ is outside Nuxt's auto-import dirs and every copy is in
   // one tree, so nothing but the count moves between these three.
-  const copies = n => Array.from({ length: n }, (_, i) => [`webapp/app/components/c${i}/X.vue`, 'Thing'])
+  const copies = n => Array.from({ length: n }, (_, i) => [`app/components/c${i}/X.vue`, 'Thing'])
   const two = finding('name', copies(2))
   const three = finding('name', copies(3))
   const four = finding('name', copies(4))
@@ -593,8 +593,8 @@ test('severity: the copy-count ladder scales the cost, and only above two copies
   // And the whole ladder stays below the factors that are about silence: four
   // ordinary copies must not outrank one value duplicated across app and server.
   assert.ok(four.score < finding('value', [
-    ['webapp/app/composables/access/useAuth.ts', 'SESSION_KEY'],
-    ['webapp/server/utils/auth-cookies.ts', 'SESSION_COOKIE'],
+    ['app/composables/access/useCart.ts', 'CART_KEY'],
+    ['server/utils/cart-cookies.ts', 'CART_COOKIE'],
   ]).score)
 })
 
@@ -602,8 +602,8 @@ test('severity: a generic single-word name is NOT treated as one concept divergi
   // `Size` in a button and `Size` in a modal: a modal having more sizes is a design
   // decision. Scoring this as drift is what made the first model flood HIGH.
   const generic = finding('subset', [
-    ['webapp/app/components/actions/atoms/UiButton.vue', 'Size (narrower)'],
-    ['webapp/app/components/overlays/atoms/UiModal.vue', 'Size (wider)'],
+    ['app/components/actions/atoms/AppButton.vue', 'Size (narrower)'],
+    ['app/components/overlays/atoms/AppModal.vue', 'Size (wider)'],
   ], { missing: ['xl'] })
   assert.notEqual(generic.level, 'HIGH')
   assert.doesNotMatch(generic.why.join(' '), /same domain identifier/)
@@ -611,18 +611,18 @@ test('severity: a generic single-word name is NOT treated as one concept divergi
 
 test('severity: the SAME compound domain name on both sides does count as diverging', () => {
   const domain = finding('subset', [
-    ['webapp/app/utils/approvals-status.ts', 'StatusBadgeVariant (narrower)'],
-    ['webapp/app/utils/review-state.ts', 'StatusBadgeVariant (wider)'],
+    ['app/utils/order-status.ts', 'OrderBadgeVariant (narrower)'],
+    ['app/utils/invoice-state.ts', 'OrderBadgeVariant (wider)'],
   ], { missing: ['teal', 'violet'] })
-  assert.match(domain.why.join(' '), /same domain identifier \(StatusBadgeVariant\)/)
+  assert.match(domain.why.join(' '), /same domain identifier \(OrderBadgeVariant\)/)
   assert.ok(domain.score > finding('subset', [
-    ['webapp/app/a.ts', 'Size (narrower)'],
-    ['webapp/app/b.ts', 'Size (wider)'],
+    ['app/a.ts', 'Size (narrower)'],
+    ['app/b.ts', 'Size (wider)'],
   ], { missing: ['xl'] }).score)
 })
 
 test('severity: a Go helper restated across many packages outranks one restated across few', () => {
-  const goSites = n => Array.from({ length: n }, (_, i) => [`api/internal/service/p${i}/x.go`, 'meta'])
+  const goSites = n => Array.from({ length: n }, (_, i) => [`internal/service/p${i}/x.go`, 'meta'])
   const many = finding('godecl', goSites(21))
   const few = finding('godecl', goSites(4))
   assert.equal(many.level, 'HIGH')
@@ -635,7 +635,7 @@ test('severity: Go copies that disagree on argument count outrank plain copies',
   // Count is otherwise the only drift signal available here - the scan reads declaration
   // heads, never bodies, so it cannot tell an in-sync copy from one that has already
   // diverged. A differing arity is drift the tool can actually see.
-  const sites = Array.from({ length: 4 }, (_, i) => [`api/internal/service/p${i}/x.go`, 'displayName'])
+  const sites = Array.from({ length: 4 }, (_, i) => [`internal/service/p${i}/x.go`, 'displayName'])
   const reimplemented = finding('godecl', sites, { reimplemented: true })
   const copies = finding('godecl', sites)
   assert.ok(reimplemented.score > copies.score)
@@ -645,8 +645,8 @@ test('severity: Go copies that disagree on argument count outrank plain copies',
 
 test('severity: a subset is only ever an inference, and says so', () => {
   const s = finding('subset', [
-    ['webapp/app/a.ts', 'AVariant (narrower)'],
-    ['webapp/app/b.ts', 'BVariant (wider)'],
+    ['app/a.ts', 'AVariant (narrower)'],
+    ['app/b.ts', 'BVariant (wider)'],
   ], { missing: ['x'] })
   assert.match(s.why.join(' '), /inferred/)
 })
@@ -663,30 +663,30 @@ test('severity: a subset is only ever an inference, and says so', () => {
 
 test('skip paths: no patterns skips nothing', () => {
   const skip = skipPathMatcher([])
-  assert.equal(skip('api/gen/go/x.go'), false)
+  assert.equal(skip('gen/go/x.go'), false)
   assert.equal(skip('anything/at/all.ts'), false)
 })
 
 test('skip paths: an undefined pattern list skips nothing', () => {
   const skip = skipPathMatcher(undefined)
-  assert.equal(skip('api/gen/go/x.go'), false)
+  assert.equal(skip('gen/go/x.go'), false)
 })
 
 test('skip paths: a pattern matches only what it names', () => {
-  const skip = skipPathMatcher(['^api/(?:gen|\.disabled-gen|migrations)(?:/|$)'])
-  assert.equal(skip('api/gen/go/x.go'), true)
-  assert.equal(skip('api/.disabled-gen/y.go'), true)
-  assert.equal(skip('api/migrations/001.sql'), true)
-  assert.equal(skip('api/internal/service/widget/widget.go'), false)
+  const skip = skipPathMatcher(['^(?:gen|\.disabled-gen|migrations)(?:/|$)'])
+  assert.equal(skip('gen/go/x.go'), true)
+  assert.equal(skip('.disabled-gen/y.go'), true)
+  assert.equal(skip('migrations/001.sql'), true)
+  assert.equal(skip('internal/service/widget/widget.go'), false)
   // Anchored at the root, so a nested directory of the same name still scans.
-  assert.equal(skip('webapp/app/gen/x.ts'), false)
+  assert.equal(skip('app/gen/x.ts'), false)
 })
 
 test('skip paths: several patterns are matched independently', () => {
-  const skip = skipPathMatcher(['^api/gen(?:/|$)', '^webapp/generated(?:/|$)'])
-  assert.equal(skip('api/gen/x.go'), true)
-  assert.equal(skip('webapp/generated/x.ts'), true)
-  assert.equal(skip('api/internal/x.go'), false)
+  const skip = skipPathMatcher(['^gen(?:/|$)', '^generated(?:/|$)'])
+  assert.equal(skip('gen/x.go'), true)
+  assert.equal(skip('generated/x.ts'), true)
+  assert.equal(skip('internal/x.go'), false)
 })
 
 // ---------------------------------------------------------------------------
@@ -705,12 +705,12 @@ test('skip paths: several patterns are matched independently', () => {
  *  from the duplication passes. Kept in one place so a test can drop a key to make a
  *  point about it rather than restating the whole set. */
 const allChecks = () => ({
-  exports_: [{ name: 'decodeExp', files: ['webapp/app/components/a/A.vue', 'webapp/app/components/b/B.vue'] }],
+  exports_: [{ name: 'decodeToken', files: ['app/components/a/A.vue', 'app/components/b/B.vue'] }],
   literals: [{
-    value: 'app-auth-session',
+    value: 'app-cart-token',
     sites: [
-      { file: 'webapp/app/composables/access/useAuth.ts', name: 'SESSION_KEY' },
-      { file: 'webapp/server/utils/auth-cookies.ts', name: 'SESSION_COOKIE' },
+      { file: 'app/composables/access/useCart.ts', name: 'CART_KEY' },
+      { file: 'server/utils/cart-cookies.ts', name: 'CART_COOKIE' },
     ],
   }],
   unions: {
@@ -718,27 +718,27 @@ const allChecks = () => ({
       members: ['gray', 'success', 'violet'],
       key: 'gray|success|violet',
       sites: [
-        { file: 'webapp/app/badge.ts', label: 'BadgeVariant' },
-        { file: 'webapp/app/alert.ts', label: 'AlertVariant' },
+        { file: 'app/badge.ts', label: 'BadgeVariant' },
+        { file: 'app/alert.ts', label: 'AlertVariant' },
       ],
     }],
     subsets: [{
-      smaller: [{ file: 'webapp/app/approvals-status.ts', label: 'StatusBadgeVariant' }],
-      larger: [{ file: 'webapp/app/review-state.ts', label: 'StatusBadgeVariant' }],
+      smaller: [{ file: 'app/order-status.ts', label: 'OrderBadgeVariant' }],
+      larger: [{ file: 'app/invoice-state.ts', label: 'OrderBadgeVariant' }],
       missing: ['teal'],
     }],
   },
   interfaces: [{
     fields: ['type', 'amount', 'unit', 'unitId'],
     sites: [
-      { file: 'webapp/app/models/entities.ts', name: 'OrderTotalsRecord' },
-      { file: 'webapp/app/models/orders.ts', name: 'OrderTotalsRecord' },
+      { file: 'app/models/entities.ts', name: 'OrderTotalsRecord' },
+      { file: 'app/models/orders.ts', name: 'OrderTotalsRecord' },
     ],
   }],
   goFuncs: [{
     name: 'meta',
     packages: 21,
-    files: Array.from({ length: 21 }, (_, i) => `api/internal/service/p${i}/x.go`),
+    files: Array.from({ length: 21 }, (_, i) => `internal/service/p${i}/x.go`),
     reimplemented: false,
   }],
 })
@@ -772,7 +772,7 @@ test('ranking: all five checks reach the list, scored, worst first', () => {
 test('ranking: each title carries the evidence, so no finding needs the source to read', () => {
   const by = Object.fromEntries(rankFindings(allChecks()).map(f => [f.check, f]))
   // A value is quoted, so trailing whitespace or an empty string stays visible.
-  assert.equal(by.value.title, '"app-auth-session"')
+  assert.equal(by.value.title, '"app-cart-token"')
   // The package count, which is the godecl finding's severity in one number.
   assert.match(by.godecl.title, /^meta .* declared in 21 packages$/)
   assert.equal(by.godecl.sites.length, 21)
@@ -780,12 +780,12 @@ test('ranking: each title carries the evidence, so no finding needs the source t
   // the line worth reading in the noisiest section of the report.
   assert.equal(by.subset.title, 'missing teal')
   assert.deepEqual(by.subset.sites.map(s => s.name), [
-    'StatusBadgeVariant (narrower)',
-    'StatusBadgeVariant (wider)',
+    'OrderBadgeVariant (narrower)',
+    'OrderBadgeVariant (wider)',
   ])
   assert.equal(by.union.title, '3 members: gray | success | violet')
   assert.equal(by.shape.title, '{type, amount, unit, unitId}')
-  assert.deepEqual(by.name.sites.map(s => s.name), ['decodeExp', 'decodeExp'])
+  assert.deepEqual(by.name.sites.map(s => s.name), ['decodeToken', 'decodeToken'])
 })
 
 test('ranking: a union declared inline on a field is labelled, not blank', () => {
@@ -801,8 +801,8 @@ test('ranking: a union declared inline on a field is labelled, not blank', () =>
         members: ['gray', 'success', 'violet'],
         key: 'gray|success|violet',
         sites: [
-          { file: 'webapp/app/components/UiBadge.vue', label: undefined },
-          { file: 'webapp/app/badge.ts', label: 'BadgeVariant' },
+          { file: 'app/components/AppBadge.vue', label: undefined },
+          { file: 'app/badge.ts', label: 'BadgeVariant' },
         ],
       }],
       subsets: [],
@@ -812,7 +812,7 @@ test('ranking: a union declared inline on a field is labelled, not blank', () =>
 })
 
 test('ranking: a repository with no Go surface still ranks its TypeScript findings', () => {
-  // `--root webapp/app` is a supported run and produces no Go results at all, so the
+  // `--root app` is a supported run and produces no Go results at all, so the
   // Go key is simply absent. Ranking must not fall over on it.
   const { goFuncs, ...noGo } = allChecks()
   assert.ok(goFuncs.length > 0) // the key really is the only thing dropped
@@ -835,13 +835,13 @@ test('ranking: equal scores break the tie by copy count, then alphabetically', (
     unions: {
       exact: [
         union(['z1', 'z2', 'z3'], [
-          { file: 'webapp/app/x.ts', label: 'X1' },
-          { file: 'webapp/app/x.ts', label: 'X2' },
-          { file: 'webapp/app/y.ts', label: 'Y' },
+          { file: 'app/x.ts', label: 'X1' },
+          { file: 'app/x.ts', label: 'X2' },
+          { file: 'app/y.ts', label: 'Y' },
         ]),
         union(['a1', 'a2', 'a3'], [
-          { file: 'webapp/app/p.ts', label: 'P' },
-          { file: 'webapp/app/q.ts', label: 'Q' },
+          { file: 'app/p.ts', label: 'P' },
+          { file: 'app/q.ts', label: 'Q' },
         ]),
       ],
       subsets: [],
@@ -859,12 +859,12 @@ test('ranking: equal scores break the tie by copy count, then alphabetically', (
     unions: {
       exact: [
         union(['z1', 'z2', 'z3'], [
-          { file: 'webapp/app/p.ts', label: 'P' },
-          { file: 'webapp/app/q.ts', label: 'Q' },
+          { file: 'app/p.ts', label: 'P' },
+          { file: 'app/q.ts', label: 'Q' },
         ]),
         union(['a1', 'a2', 'a3'], [
-          { file: 'webapp/app/r.ts', label: 'R' },
-          { file: 'webapp/app/s.ts', label: 'S' },
+          { file: 'app/r.ts', label: 'R' },
+          { file: 'app/s.ts', label: 'S' },
         ]),
       ],
       subsets: [],
@@ -896,7 +896,7 @@ const SCANNER = path.join(path.dirname(fileURLToPath(import.meta.url)), 'dupesca
 /**
  * A miniature of the repository the scanner was written against.
  *
- * One real case per check -- the cookie value under two names, `decodeExp` in two
+ * One real case per check -- the cookie value under two names, `decodeToken` in two
  * modules, one palette split between a `.vue` and a `.ts`, one Go helper in four
  * packages -- and, next to each, the lookalike the walk must leave out: a vendored
  * tree, a generated tree, a `_test.go` and a `<template>` block. Every exclusion is
@@ -909,11 +909,11 @@ const FIXTURE = {
     skip_paths: ['^src/generated(?:/|$)'],
   }),
 
-  'repo/src/auth-app.ts': `export const SESSION_KEY = 'app-auth-session'
-export function decodeExp(t: string) { return 1 }
+  'repo/src/auth-app.ts': `export const CART_KEY = 'app-cart-token'
+export function decodeToken(t: string) { return 1 }
 `,
-  'repo/src/auth-server.ts': `export const SESSION_COOKIE = 'app-auth-session'
-export function decodeExp(t: string) { return 2 }
+  'repo/src/auth-server.ts': `export const CART_COOKIE = 'app-cart-token'
+export function decodeToken(t: string) { return 2 }
 `,
 
   // The palette, half of it in an SFC. TplVariant exists only so the template below
@@ -921,7 +921,7 @@ export function decodeExp(t: string) { return 2 }
   'repo/src/badge.ts': `export type BadgeVariant = 'gray' | 'success' | 'violet'
 export type TplVariant = 'tpl-a' | 'tpl-b' | 'tpl-c'
 `,
-  'repo/src/UiBadge.vue': `<script setup lang="ts">
+  'repo/src/AppBadge.vue': `<script setup lang="ts">
 type Variant = 'gray' | 'success' | 'violet'
 </script>
 <template>
@@ -931,13 +931,13 @@ type Variant = 'gray' | 'success' | 'violet'
 
   // Vendored and generated copies of a scanned declaration. Neither may be read:
   // node_modules by directory name, src/generated by the config's skip_paths.
-  'repo/src/node_modules/dup.ts': `export function decodeExp(t: string) { return 3 }
+  'repo/src/node_modules/dup.ts': `export function decodeToken(t: string) { return 3 }
 `,
-  'repo/src/generated/dup.ts': `export function decodeExp(t: string) { return 4 }
+  'repo/src/generated/dup.ts': `export function decodeToken(t: string) { return 4 }
 `,
 
-  // Check 5: four packages, plus a fifth that is test scaffolding. `adminCtx` and
-  // `ctxAs` are the real reason for that exclusion, at 8 and 7 packages each.
+  // Check 5: four packages, plus a fifth that is test scaffolding, which is the
+  // shape the test-path exclusion exists for.
   'repo/src/svc/a/a.go': 'package a\n\nfunc meta() int { return 1 }\n',
   'repo/src/svc/b/b.go': 'package b\n\nfunc meta() int { return 1 }\n',
   'repo/src/svc/c/c.go': 'package c\n\nfunc meta() int { return 1 }\n',
@@ -947,8 +947,8 @@ type Variant = 'gray' | 'success' | 'violet'
   'repo/bad.json': '{ not json',
 
   // A checkout that has never written a config, to pin the honest fallback.
-  'unconfigured/a.ts': `export const A = 'app-auth-session'\n`,
-  'unconfigured/b.ts': `export const B = 'app-auth-session'\n`,
+  'unconfigured/a.ts': `export const A = 'app-cart-token'\n`,
+  'unconfigured/b.ts': `export const B = 'app-cart-token'\n`,
 
   // A configured checkout with nothing to report, for the other half of --strict.
   'clean/dupescan.json': JSON.stringify({ roots: ['src'] }),
@@ -990,7 +990,7 @@ test('cli: the walk reads the configured roots and reports across both surfaces'
 
 test('cli: a vendored or generated copy of a declaration is not a second declaration', () => {
   // The negative half, and the one that matters most here: node_modules and a
-  // generated tree hold `decodeExp` too. If either were walked the finding would name
+  // generated tree hold `decodeToken` too. If either were walked the finding would name
   // four files and send a reader to a directory nobody edits.
   const out = scanJson('repo')
   const name = out.findings.find(f => f.check === 'name')
@@ -1007,7 +1007,7 @@ test('cli: a Go helper is counted per package, and _test.go is not a package', (
 test('cli: an SFC contributes its script block and not its template', () => {
   const out = scanJson('repo')
   const union = out.findings.find(f => f.check === 'union')
-  assert.deepEqual(union.sites.map(s => s.file).sort(), ['src/UiBadge.vue', 'src/badge.ts'])
+  assert.deepEqual(union.sites.map(s => s.file).sort(), ['src/AppBadge.vue', 'src/badge.ts'])
   // The template restates TplVariant's members verbatim. Reading the whole file would
   // pair the two and produce a second union finding out of markup.
   assert.equal(out.findings.some(f => /tpl-a/.test(f.title)), false)
@@ -1015,7 +1015,7 @@ test('cli: an SFC contributes its script block and not its template', () => {
 
 test('cli: --root overrides the configured roots for one run', () => {
   // The flag is how someone narrows a run without editing anything -- `--root
-  // api/internal` for the Go half alone is the documented case.
+  // internal` for the Go half alone is the documented case.
   const out = scanJson('repo', '--root', 'src/svc')
   assert.equal(out.scanned, 4)
   assert.deepEqual(out.findings.map(f => f.check), ['godecl'])
@@ -1039,11 +1039,11 @@ test('cli: the text report names every file and its reason under each finding', 
   assert.match(out, /\n4 findings . 0 HIGH, 2 MEDIUM, 2 LOW\n/)
   assert.match(out, /severity is how SILENTLY it fails/)
   // Then each finding: its level, the check's label in prose, both sites, the why.
-  assert.match(out, /\[MEDIUM\] same VALUE, two names . "app-auth-session"\n/)
-  assert.match(out, /\n {6}SESSION_KEY {2}src\/auth-app\.ts\n/)
-  assert.match(out, /\n {6}SESSION_COOKIE {2}src\/auth-server\.ts\n/)
+  assert.match(out, /\[MEDIUM\] same VALUE, two names . "app-cart-token"\n/)
+  assert.match(out, /\n {6}CART_KEY {2}src\/auth-app\.ts\n/)
+  assert.match(out, /\n {6}CART_COOKIE {2}src\/auth-server\.ts\n/)
   assert.match(out, /\n {6}why: a duplicated VALUE fails at runtime/)
-  assert.match(out, /\[LOW\] same NAME, two modules . decodeExp\n/)
+  assert.match(out, /\[LOW\] same NAME, two modules . decodeToken\n/)
   assert.match(out, /\[MEDIUM\] same Go helper restated per package /)
   assert.match(out, /\[LOW\] same union restated /)
 })
@@ -1067,7 +1067,7 @@ test('cli: a checkout with no config scans everything and says so', () => {
   assert.match(r.stderr, /scanning \./)
   const out = JSON.parse(r.stdout)
   assert.equal(out.scanned, 2)
-  assert.equal(out.findings[0].title, '"app-auth-session"')
+  assert.equal(out.findings[0].title, '"app-cart-token"')
   // And the negative half: a checkout that HAS named its roots gets no warning,
   // otherwise the message is noise on every run and stops being read.
   assert.equal(scan('repo', '--json').stderr, '')

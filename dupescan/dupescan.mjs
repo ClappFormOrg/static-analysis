@@ -86,8 +86,8 @@ function skipPathMatcher(patterns) {
 
 /** Tests are excluded: a fixture named like a production symbol is not a duplicate
  *  declaration, and mock modules restate real shapes by design. On the Go side this
- *  matters more than on the TS side - `adminCtx` and `ctxAs` are each declared in 8
- *  and 7 packages respectively, entirely in `_test.go` files, and they are test
+ *  matters more than on the TS side: a Go codebase's test helpers are routinely
+ *  declared once per package, entirely in `_test.go` files, and they are test
  *  scaffolding rather than production duplication. */
 const isTestPath = f => /\.(test|spec)\.(?:[cm]?tsx?|vue)$/.test(f)
   || f.includes('__tests__')
@@ -213,7 +213,7 @@ function checkDuplicateExports(sources) {
 // ---------------------------------------------------------------------------
 // Check 2 - the same string VALUE behind more than one exported constant.
 //
-// The cookie-name case: `SESSION_KEY` in app/ and `SESSION_COOKIE` in server/, same
+// The cookie-name case: `CART_KEY` in app/ and `CART_COOKIE` in server/, same
 // string, nothing connecting them. Two names for one value drift the moment either
 // side is renamed, and nothing fails.
 //
@@ -344,7 +344,7 @@ const MIN_FIELDS = 4
  * caller: a shape written as an `interface` in one module and as a `type` alias in
  * another is the same record twice, which is the whole claim of this check. Reading
  * only `interface` made the form of the declaration decide whether a duplicate was
- * visible, and eight object-shaped aliases sit in the webapp today.
+ * visible, and object-shaped aliases are common in a TypeScript codebase.
  *
  * The alias arm requires `= {` with nothing but whitespace between, so a union of
  * object types, a mapped type (`{ [K in T]: ... }`, whose members are not field names)
@@ -511,7 +511,7 @@ function checkDuplicateGoFuncs(sources) {
       packages: at.pkgs.size,
       files: [...at.files].sort(),
       // More than one arity means these are re-implementations of one idea rather than
-      // copies of one function - the `decodeExp` shape, on the Go side.
+      // copies of one function - the `decodeToken` shape, on the Go side.
       reimplemented: at.arities.size > 1,
     })
   }
@@ -546,25 +546,49 @@ function checkDuplicateGoFuncs(sources) {
 //   Same file is the mildest: still worth fixing, but no other module can be misled.
 // ---------------------------------------------------------------------------
 
-/** Dirs Nuxt publishes app-wide (nuxt.config `imports.dirs`, plus Nuxt's own defaults
- *  for the top level of `composables/` and `utils/`). A duplicate name here is chosen
- *  for the caller rather than by them. */
-const AUTO_IMPORT_RE = /webapp\/app\/(?:composables\/(?:data|access|forms|ui|features)\/|utils\/(?:api|format|mutations|dom)\/|composables\/[^/]+$|utils\/[^/]+$)/
-
+/** Trees a duplicate can straddle. Two modules in different trees here cannot import
+ *  each other, so a copy in each is the only option available and nothing links them.
+ *
+ *  Keyed on path segments and on the Go file extension rather than on any repository's
+ *  top-level directory names, so the rule holds wherever the trees are rooted. */
 const treeOf = (f) => {
-  if (f.startsWith('api/')) return 'api'
-  if (f.includes('/e2e/')) return 'e2e'
-  if (f.startsWith('webapp/server/')) return 'server'
-  if (f.startsWith('shared/') || f.startsWith('webapp/shared/')) return 'shared'
-  if (f.includes('/scripts/')) return 'scripts'
+  if (isGo(f)) return 'go'
+  if (/(?:^|\/)e2e\//.test(f)) return 'e2e'
+  if (/(?:^|\/)server\//.test(f)) return 'server'
+  if (/(?:^|\/)shared\//.test(f)) return 'shared'
+  if (/(?:^|\/)scripts\//.test(f)) return 'scripts'
   return 'app'
 }
+
+/** Trees a framework publishes app-wide, where a duplicate name is resolved FOR the
+ *  caller rather than by them. The default is the convention Nuxt applies with no
+ *  configuration: the top level of `composables/` and `utils/`, wherever they sit.
+ *
+ *  A project that publishes more than that -- Nuxt's own `imports.dirs`, or another
+ *  framework's equivalent -- names those trees in `auto_import_paths`. Which
+ *  directories a build auto-imports is a fact about one project's configuration, so
+ *  the default stays at the framework convention rather than at any one project's
+ *  extension of it. */
+const DEFAULT_AUTO_IMPORT_PATHS = ['(?:^|/)(?:composables|utils)/[^/]+$']
+
+/** Build the auto-import matcher from config, on the same contract as
+ *  skipPathMatcher: no patterns matches nothing, rather than an empty regex matching
+ *  everything. */
+function autoImportMatcher(patterns) {
+  if (!patterns || patterns.length === 0) return () => false
+  const re = new RegExp(patterns.map(p => `(?:${p})`).join('|'))
+  return f => re.test(f)
+}
+
+const defaultAutoImport = autoImportMatcher(DEFAULT_AUTO_IMPORT_PATHS)
 
 const LEVELS = [[7, 'HIGH'], [4, 'MEDIUM']]
 const levelFor = score => LEVELS.find(([min]) => score >= min)?.[1] ?? 'LOW'
 
-/** Score one normalised finding, collecting the reasons so the report can show them. */
-function scoreFinding(f) {
+/** Score one normalised finding, collecting the reasons so the report can show them.
+ *  isAutoImport decides whether a path sits in an app-wide auto-import tree; it is a
+ *  parameter rather than a module constant so the answer comes from config. */
+function scoreFinding(f, isAutoImport = defaultAutoImport) {
   const files = [...new Set(f.sites.map(s => s.file))]
   const trees = [...new Set(files.map(treeOf))]
   const why = []
@@ -629,7 +653,7 @@ function scoreFinding(f) {
     score -= 2
     why.push('both in ONE file, so no other module can be misled')
   } else {
-    if (files.some(x => AUTO_IMPORT_RE.test(x)) && f.check === 'name') {
+    if (files.some(x => isAutoImport(x)) && f.check === 'name') {
       score += 3
       why.push('auto-import scope: a bare call binds one of them silently')
     }
@@ -657,7 +681,7 @@ function scoreFinding(f) {
 }
 
 /** Flatten every check into one comparable list, worst first. */
-function rankFindings({ exports_, literals, unions, interfaces, goFuncs = [] }) {
+function rankFindings({ exports_, literals, unions, interfaces, goFuncs = [], isAutoImport = defaultAutoImport }) {
   const out = []
   for (const f of literals) {
     out.push({ check: 'value', title: JSON.stringify(f.value), sites: f.sites })
@@ -696,7 +720,7 @@ function rankFindings({ exports_, literals, unions, interfaces, goFuncs = [] }) 
       sites: f.sites.map(s => ({ file: s.file, name: s.name })),
     })
   }
-  for (const f of out) Object.assign(f, scoreFinding(f))
+  for (const f of out) Object.assign(f, scoreFinding(f, isAutoImport))
   return out.sort((a, b) => b.score - a.score
     || b.sites.length - a.sites.length
     || a.title.localeCompare(b.title))
@@ -762,14 +786,18 @@ function parseArgs(argv) {
   return {
     roots: roots.length ? roots : (configured ?? DEFAULT_ROOTS),
     skipPaths: Array.isArray(cfg.skip_paths) ? cfg.skip_paths : DEFAULT_SKIP_PATHS,
+    autoImportPaths: Array.isArray(cfg.auto_import_paths)
+      ? cfg.auto_import_paths
+      : DEFAULT_AUTO_IMPORT_PATHS,
     json,
     strict,
   }
 }
 
 function main() {
-  const { roots, skipPaths, json, strict } = parseArgs(process.argv.slice(2))
+  const { roots, skipPaths, autoImportPaths, json, strict } = parseArgs(process.argv.slice(2))
   const skip = skipPathMatcher(skipPaths)
+  const isAutoImport = autoImportMatcher(autoImportPaths)
   const files = roots.flatMap(r => walk(r, [], skip))
   const sources = files.map((f) => {
     const raw = fs.readFileSync(f, 'utf8')
@@ -793,7 +821,7 @@ function main() {
   const total = exports_.length + literals.length + unions.exact.length
     + unions.subsets.length + interfaces.length + goFuncs.length
 
-  const ranked = rankFindings({ exports_, literals, unions, interfaces, goFuncs })
+  const ranked = rankFindings({ exports_, literals, unions, interfaces, goFuncs, isAutoImport })
 
   if (json) {
     process.stdout.write(JSON.stringify({ scanned: sources.length, findings: ranked }, null, 2) + '\n')
@@ -831,6 +859,7 @@ const invokedDirectly = process.argv[1]
 if (invokedDirectly) main()
 
 export {
+  autoImportMatcher,
   checkDuplicateExports,
   skipPathMatcher,
   checkDuplicateLiteralConsts,

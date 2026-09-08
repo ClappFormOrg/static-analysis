@@ -20,17 +20,17 @@ func write(t *testing.T, name, body string) string {
 }
 
 const oursCSV = `language,element,file,line,loc,mccabe,params,unit_size_category
-Go,Encode,api/internal/pagination/cursor.go,80,13,4,0,low
-Go,Decode,api/internal/pagination/cursor.go,98,17,7,2,moderate
-Go,OnlyOurs,api/internal/pagination/cursor.go,140,9,3,1,low
+Go,Encode,internal/pagination/cursor.go,80,13,4,0,low
+Go,Decode,internal/pagination/cursor.go,98,17,7,2,moderate
+Go,OnlyOurs,internal/pagination/cursor.go,140,9,3,1,low
 TypeScript,useThing,app/x.ts,3,9,2,1,low
 `
 
 // lizard writes no header, and on Windows emits a path carrying both separators.
-const theirsCSV = `13,4,79,0,13,"Encode@80-92@api/internal/pagination\cursor.go","api/internal/pagination\cursor.go","Encode","(c Cursor)Encode",80,92
-34,9,120,2,17,"Decode@98-114@api/internal/pagination\cursor.go","api/internal/pagination\cursor.go","Decode","Decode token , expectOrderBy string",98,114
-9,3,50,1,9,"@200-208@api/internal/pagination\cursor.go","api/internal/pagination\cursor.go",""," ",200,208
-5,1,20,0,5,"OnlyTheirs@300-304@api/internal/pagination\cursor.go","api/internal/pagination\cursor.go","OnlyTheirs","OnlyTheirs",300,304
+const theirsCSV = `13,4,79,0,13,"Encode@80-92@internal/pagination\cursor.go","internal/pagination\cursor.go","Encode","(c Cursor)Encode",80,92
+34,9,120,2,17,"Decode@98-114@internal/pagination\cursor.go","internal/pagination\cursor.go","Decode","Decode token , expectOrderBy string",98,114
+9,3,50,1,9,"@200-208@internal/pagination\cursor.go","internal/pagination\cursor.go",""," ",200,208
+5,1,20,0,5,"OnlyTheirs@300-304@internal/pagination\cursor.go","internal/pagination\cursor.go","OnlyTheirs","OnlyTheirs",300,304
 `
 
 // TestMatchesAcrossPathSeparatorsAndReportsBothSides holds the mechanics the
@@ -53,7 +53,7 @@ func TestMatchesAcrossPathSeparatorsAndReportsBothSides(t *testing.T) {
 	if anonymous != 1 {
 		t.Errorf("counted %d unnamed callables, want 1", anonymous)
 	}
-	if _, ok := them["api/internal/pagination/cursor.go:80"]; !ok {
+	if _, ok := them["internal/pagination/cursor.go:80"]; !ok {
 		t.Errorf("a Windows-separated path did not normalise; keys are %v", keys(them))
 	}
 
@@ -144,7 +144,7 @@ func runMain(t *testing.T, args ...string) string {
 
 // TestMainComparesTheFilesItIsGiven pins the flags the make recipe passes.
 // -language is the one carrying a default, and that default is what keeps a Go
-// comparison from folding in the webapp's units, which lizard was never pointed
+// comparison from folding in another language's units, which lizard was never pointed
 // at and which would therefore read as a pile of functions it missed.
 func TestMainComparesTheFilesItIsGiven(t *testing.T) {
 	ours, theirs := write(t, "ours.csv", oursCSV), write(t, "theirs.csv", theirsCSV)
@@ -274,7 +274,7 @@ func TestRunSurfacesAnUnreadableInput(t *testing.T) {
 // this tool can compare -- reading one as a unit would put a phantom in our
 // total that nothing on lizard's side could ever match.
 func TestReadOursKeepsOneLanguageAndWholeRows(t *testing.T) {
-	path := write(t, "ours.csv", oursCSV+"Go,Truncated,api/x.go,1,2\n")
+	path := write(t, "ours.csv", oursCSV+"Go,Truncated,x.go,1,2\n")
 
 	goUnits, err := readOurs(path, "Go")
 	if err != nil {
@@ -283,7 +283,7 @@ func TestReadOursKeepsOneLanguageAndWholeRows(t *testing.T) {
 	if len(goUnits) != 3 {
 		t.Errorf("read %d Go units, want 3; keys are %v", len(goUnits), keys(goUnits))
 	}
-	if _, ok := goUnits["api/x.go:1"]; ok {
+	if _, ok := goUnits["x.go:1"]; ok {
 		t.Error("a row with no mccabe or params column was read as a unit")
 	}
 
@@ -336,7 +336,7 @@ func TestReportSummarisesEachMetricSeparately(t *testing.T) {
 		{"HalfTheirReading", 10, 20},
 		{"TwiceTheirReading", 40, 20},
 	} {
-		o := measurement{File: "api/x.go", Line: line, Name: tc.name, LOC: tc.ourLOC, McCabe: 3}
+		o := measurement{File: "x.go", Line: line, Name: tc.name, LOC: tc.ourLOC, McCabe: 3}
 		theirs := o
 		theirs.LOC = tc.theirLOC
 		ours[o.key()], them[theirs.key()] = o, theirs
@@ -390,7 +390,7 @@ func TestWorstCapsTheListingAndKeepsTheWidest(t *testing.T) {
 		{"Halved", 5, 10},         // 0.5
 		{"Quadrupled", 40, 10},    // 4.0
 	} {
-		o := measurement{File: "api/x.go", Line: line, Name: tc.name, LOC: tc.ourLOC, McCabe: 3}
+		o := measurement{File: "x.go", Line: line, Name: tc.name, LOC: tc.ourLOC, McCabe: 3}
 		theirs := o
 		theirs.LOC = tc.theirLOC
 		ours[o.key()], them[theirs.key()] = o, theirs
@@ -401,10 +401,10 @@ func TestWorstCapsTheListingAndKeepsTheWidest(t *testing.T) {
 	report(b, ours, them, 0, 2)
 	capped := b.String()
 
-	if !strings.Contains(capped, "api/x.go:40 Quadrupled: ours 40, theirs 10") {
+	if !strings.Contains(capped, "x.go:40 Quadrupled: ours 40, theirs 10") {
 		t.Errorf("the widest divergence was not listed:\n%s", capped)
 	}
-	if !strings.Contains(capped, "api/x.go:30 Halved: ours 5, theirs 10") {
+	if !strings.Contains(capped, "x.go:30 Halved: ours 5, theirs 10") {
 		t.Errorf("the second widest was not listed:\n%s", capped)
 	}
 	// A quarter of their reading is further from agreement than half again as

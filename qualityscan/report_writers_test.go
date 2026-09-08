@@ -15,15 +15,15 @@ func reportFixture() []Finding {
 	return []Finding{
 		{Rule: RuleFunctionSize, Element: "Handler", Value: 900,
 			Description: "function size in tokens: 900 (very high risk, [> 750])",
-			File:        "api/handler.go", Line: 12, Severity: SeverityVeryHigh.String()},
+			File:        "handler.go", Line: 12, Severity: SeverityVeryHigh.String()},
 		{Rule: RuleFunctionSize, Element: "Middle", Value: 400,
 			Description: "function size in tokens: 400 (high risk, [> 300])",
-			File:        "api/handler.go", Line: 80, Severity: SeverityHigh.String()},
+			File:        "handler.go", Line: 80, Severity: SeverityHigh.String()},
 		{Rule: RuleNestedLoop, Element: "Sweep",
 			// The comma is load-bearing: a description carrying one has to come
 			// back out of the CSV as a single field.
 			Description: "two nested range loops, over rows and columns",
-			File:        "api/sweep.go", Line: 30, Severity: SeverityFinding.String()},
+			File:        "sweep.go", Line: 30, Severity: SeverityFinding.String()},
 	}
 }
 
@@ -85,10 +85,10 @@ func TestCSVKeepsASectionForEveryRule(t *testing.T) {
 	}
 
 	for _, want := range []string{
-		`1,Handler,"function size in tokens: 900 (very high risk, [> 750])",api/handler.go,12`,
-		`2,Middle,"function size in tokens: 400 (high risk, [> 300])",api/handler.go,80`,
+		`1,Handler,"function size in tokens: 900 (very high risk, [> 750])",handler.go,12`,
+		`2,Middle,"function size in tokens: 400 (high risk, [> 300])",handler.go,80`,
 		// Back to 1, in the second populated section, five sections later.
-		`1,Sweep,"two nested range loops, over rows and columns",api/sweep.go,30`,
+		`1,Sweep,"two nested range loops, over rows and columns",sweep.go,30`,
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("CSV missing row %q\ngot:\n%s", want, out)
@@ -172,10 +172,10 @@ func TestTextReportSeparatesOpenFromAccepted(t *testing.T) {
 	// under it at file:line.
 	for _, want := range []string{
 		"\n" + RuleFunctionSize + " (2)\n",
-		"  api/handler.go:12  Handler  function size in tokens: 900",
-		"  api/handler.go:80  Middle  function size in tokens: 400",
+		"  handler.go:12  Handler  function size in tokens: 900",
+		"  handler.go:80  Middle  function size in tokens: 400",
 		"\n" + RuleNestedLoop + " (1)\n",
-		"  api/sweep.go:30  Sweep  two nested range loops",
+		"  sweep.go:30  Sweep  two nested range loops",
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("the findings listing is missing %q, got:\n%s", want, out)
