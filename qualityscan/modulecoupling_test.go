@@ -278,11 +278,11 @@ func TestSIGModulesCSVLabelsEveryModule(t *testing.T) {
 			// Nothing outside its own component leans on it, so it is hidden.
 			// 6 incoming modules is low; the 60 references are not what the
 			// default convention bands on.
-			{File: "api/internal/store/store.go", Component: "store", LOC: 200,
+			{File: "internal/store/store.go", Component: "store", LOC: 200,
 				InModules: 6, InRefs: 60, InCrossComponent: 0},
 			// Referenced from three other components, so exposed, and 25
 			// incoming modules puts it in the third band.
-			{File: "api/internal/server/wiring.go", Component: "server", LOC: 90,
+			{File: "internal/server/wiring.go", Component: "server", LOC: 90,
 				InModules: 25, InRefs: 25, InCrossComponent: 3},
 		},
 	}})
@@ -293,8 +293,8 @@ func TestSIGModulesCSVLabelsEveryModule(t *testing.T) {
 
 	for _, want := range []string{
 		"language,file,component,loc,in_modules,in_refs,in_cross_component,hidden,module_coupling_category",
-		"Go,api/internal/store/store.go,store,200,6,60,0,true,low",
-		"Go,api/internal/server/wiring.go,server,90,25,25,3,false,high",
+		"Go,internal/store/store.go,store,200,6,60,0,true,low",
+		"Go,internal/server/wiring.go,server,90,25,25,3,false,high",
 	} {
 		if !strings.Contains(got, want) {
 			t.Errorf("CSV missing %q\ngot:\n%s", want, got)
@@ -342,10 +342,10 @@ func TestQualifyPathReportsFromTheRepositoryRoot(t *testing.T) {
 		prefix, rel, want string
 		why               string
 	}{
-		{"api", "internal/store/store.go", "api/internal/store/store.go", "the ordinary case"},
+		{"svc", "internal/store/store.go", "svc/internal/store/store.go", "the ordinary case"},
 		// The flag is written by hand, so a trailing slash is a spelling of the
 		// same prefix rather than a request for a doubled separator.
-		{"api/", "internal/store/store.go", "api/internal/store/store.go", "a trailing slash is absorbed"},
+		{"svc/", "internal/store/store.go", "svc/internal/store/store.go", "a trailing slash is absorbed"},
 		// Scanning the repository root itself supplies no prefix, and the path
 		// is already the one to report.
 		{"", "internal/store/store.go", "internal/store/store.go", "no prefix leaves the path alone"},

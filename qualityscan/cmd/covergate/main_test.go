@@ -569,15 +569,15 @@ func TestRaiseTo(t *testing.T) {
 // people fixing it rather than deleting it, and a message that only says "50.2
 // < 50.5" invites the second.
 func TestVerdictSaysWhatToDo(t *testing.T) {
-	failing := report{Covered: 100, Statements: 1000, Floor: 50, FloorPath: "api/.coverage-floor"}
+	failing := report{Covered: 100, Statements: 1000, Floor: 50, FloorPath: ".coverage-floor"}
 	got := failing.verdict()
-	for _, want := range []string{"BELOW FLOOR", "400", "api/.coverage-floor", "rather than dropping the check"} {
+	for _, want := range []string{"BELOW FLOOR", "400", ".coverage-floor", "rather than dropping the check"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("verdict = %q, want it to mention %q", got, want)
 		}
 	}
 
-	passing := report{Covered: 700, Statements: 1000, Floor: 50, FloorPath: "api/.coverage-floor"}
+	passing := report{Covered: 700, Statements: 1000, Floor: 50, FloorPath: ".coverage-floor"}
 	got = passing.verdict()
 	if !strings.Contains(got, "OK:") {
 		t.Errorf("verdict = %q, want it to start OK", got)
@@ -588,7 +588,7 @@ func TestVerdictSaysWhatToDo(t *testing.T) {
 
 	// The baseline position says nothing about raising, so a passing run is one
 	// line rather than two.
-	baseline := report{Covered: 18865, Statements: 37609, Floor: 50, FloorPath: "api/.coverage-floor"}
+	baseline := report{Covered: 18865, Statements: 37609, Floor: 50, FloorPath: ".coverage-floor"}
 	if got := baseline.verdict(); strings.Contains(got, "raised to") {
 		t.Errorf("verdict = %q, want no raise advice at 0.16pp of headroom", got)
 	}
@@ -599,7 +599,7 @@ func TestVerdictSaysWhatToDo(t *testing.T) {
 // step.
 func TestReportsQuoteTheSameNumbers(t *testing.T) {
 	r := report{
-		FloorPath: "api/.coverage-floor", Floor: 50,
+		FloorPath: ".coverage-floor", Floor: 50,
 		Statements: 37609, Covered: 18865,
 		GeneratedStatements: 41159, GeneratedFiles: 65,
 		GeneratedPackages: []string{"gen/go/apiv1"},
@@ -626,7 +626,7 @@ func TestReportsQuoteTheSameNumbers(t *testing.T) {
 // like a package with no uncovered code.
 func TestReportsHonourTheWorstLimit(t *testing.T) {
 	r := report{
-		FloorPath: "api/.coverage-floor", Floor: 50,
+		FloorPath: ".coverage-floor", Floor: 50,
 		Statements: 300, Covered: 150,
 		Packages: []pkg{
 			{Path: "internal/store", Statements: 100, Covered: 10},
@@ -661,7 +661,7 @@ func TestReportsHonourTheWorstLimit(t *testing.T) {
 // have to render rather than print an empty table with a header over it.
 func TestReportsOnAnEmptyModuleSayNothingAboutPackages(t *testing.T) {
 	r := report{
-		FloorPath:           "api/.coverage-floor",
+		FloorPath:           ".coverage-floor",
 		GeneratedStatements: 41159, GeneratedFiles: 65,
 		GeneratedPackages: []string{"gen/go/apiv1"},
 	}
@@ -679,7 +679,7 @@ func TestReportsOnAnEmptyModuleSayNothingAboutPackages(t *testing.T) {
 }
 
 // TestPlural exists because the noun is read next to a count that is usually
-// one in this repository -- api/gen is the only generated package most of the
+// one in this repository -- gen is the only generated package most of the
 // time -- so the branch that fires on every real run is the one a test would
 // most easily leave to the other.
 func TestPlural(t *testing.T) {

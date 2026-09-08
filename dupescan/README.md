@@ -48,6 +48,7 @@ unless `--config` names it somewhere else:
 | --- | --- |
 | `roots` | Repo-root-relative trees to scan. `--root` overrides it for a single run. |
 | `skip_paths` | Regular expressions, anchored at the repo root, for trees that are not hand-written. Matched against POSIX paths, so a nested directory of the same name elsewhere is not swept up. |
+| `auto_import_paths` | Regular expressions for trees the build publishes app-wide, where a duplicate name is resolved *for* the caller. Raises severity on a name collision. Defaults to the convention Nuxt applies with no configuration, the top level of `composables/` and `utils/`; a project whose `imports.dirs` publishes more than that names the extra trees here. |
 
 With no config and no `--root`, the scan falls back to the whole working directory and
 says so on stderr. That is the honest fallback, since a tool that silently scanned
@@ -141,7 +142,7 @@ the duplicate fails**, not how many copies exist:
 Subset findings are deliberately **inferences** and say so. A narrower palette is often
 correct, since a status that must never take one of the colours is a constraint rather
 than drift, so they only escalate when the *same compound* identifier appears on both
-sides. `StatusBadgeVariant` narrower than `StatusBadgeVariant` is one concept diverging;
+sides. `OrderBadgeVariant` narrower than `OrderBadgeVariant` is one concept diverging;
 `Size` in a button being narrower than `Size` in a modal is a design decision. Getting
 that backwards makes a subset model rank a design system behaving normally as its
 highest findings.

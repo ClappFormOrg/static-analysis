@@ -172,28 +172,28 @@ func TestChangedFilesReadsEveryStatusShape(t *testing.T) {
 
 // The paths have to come out relative to the directory the tool was pointed at,
 // because golangci-lint matches them against the directory IT runs in. A run
-// from api/ that emitted repository-root paths would produce a patch matching
-// nothing, and a ratchet matching nothing passes everything.
+// from the module directory that emitted repository-root paths would produce a
+// patch matching nothing, and a ratchet matching nothing passes everything.
 func TestChangedFilesScopesPathsToTheWorkingDirectory(t *testing.T) {
 	dir, base := newRepo(t, map[string]string{
-		"api/internal/store/widget.go": srcPlain,
+		"svc/internal/store/widget.go": srcPlain,
 		"tools/other.go":               srcPlain,
 	})
 	writeFiles(t, dir, map[string]string{
-		"api/internal/store/widget.go": srcChanged,
+		"svc/internal/store/widget.go": srcChanged,
 		"tools/other.go":               srcChanged,
 	})
-	t.Chdir(filepath.Join(dir, "api"))
+	t.Chdir(filepath.Join(dir, "svc"))
 
 	got, err := changedFiles(base)
 	if err != nil {
 		t.Fatalf("changedFiles: %v", err)
 	}
 	if len(got) != 1 {
-		t.Fatalf("got %v, want only the file below api/", got)
+		t.Fatalf("got %v, want only the file below svc/", got)
 	}
 	if got[0].Path != "internal/store/widget.go" {
-		t.Errorf("path = %q, want it stripped of the api/ prefix", got[0].Path)
+		t.Errorf("path = %q, want it stripped of the svc/ prefix", got[0].Path)
 	}
 }
 
@@ -402,11 +402,11 @@ func TestGitShowReadsTheBaseVersionNotTheWorkingTree(t *testing.T) {
 
 // The `rev:./path` spelling is what makes the relative paths --relative
 // produces resolvable. `rev:path` is read from the repository root, so a run
-// from api/ would look for api/internal/... at the top of the tree, miss, and
-// keep every file it could not compare.
+// from a module subdirectory would look for internal/... at the top of the
+// tree, miss, and keep every file it could not compare.
 func TestGitShowResolvesRelativeToTheWorkingDirectory(t *testing.T) {
-	dir, base := newRepo(t, map[string]string{"api/internal/store/widget.go": srcPlain})
-	t.Chdir(filepath.Join(dir, "api"))
+	dir, base := newRepo(t, map[string]string{"svc/internal/store/widget.go": srcPlain})
+	t.Chdir(filepath.Join(dir, "svc"))
 
 	got, err := gitShow(base, "internal/store/widget.go")
 	if err != nil {

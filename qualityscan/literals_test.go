@@ -10,7 +10,7 @@ func TestIsFilesystemPath(t *testing.T) {
 		// Real paths.
 		{"/opt/idp/data/import/service-realm.json", true},
 		{"/etc/ssl/certs", true},
-		{"api/seed/prod.live.sql", true},
+		{"data/seed/fixtures.sql", true},
 		{"./config/app.yaml", true},
 		{"../migrations/001.up.sql", true},
 		{`C:\Users\svc\config.json`, true},
@@ -54,7 +54,7 @@ type T struct {
 	Name string ` + "`json:\"name\" db:\"https://not-a-url\"`" + `
 }
 
-const seed = "api/seed/prod.live.sql"
+const seed = "data/seed/fixtures.sql"
 
 func Handler() string {
 	_ = b.X
@@ -84,7 +84,7 @@ func Handler() string {
 	if len(paths) != 1 {
 		t.Fatalf("got %d path findings, want 1 (the route is not a path): %+v", len(paths), paths)
 	}
-	if want := "api/seed/prod.live.sql"; paths[0].Value != want {
+	if want := "data/seed/fixtures.sql"; paths[0].Value != want {
 		t.Errorf("path value = %q, want %q", paths[0].Value, want)
 	}
 	if want := "a.go"; paths[0].Element != want {
