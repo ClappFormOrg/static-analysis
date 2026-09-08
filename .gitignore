@@ -1,0 +1,8 @@
+# Build output from `go build ./qualityscan`; the tools are meant to be run
+# either as installed binaries or with `go run`.
+/qualityscan.exe
+/qualityscan/qualityscan
+/qualityscan/qualityscan.exe
+
+# Coverage profiles written by the CI workflow and by a local `go test -cover`.
+/cover.out

@@ -1,0 +1,9 @@
+# Normalise all text files to LF in the repository, so a Windows checkout
+# (core.autocrlf=true) cannot rewrite the tree to CRLF and produce
+# line-ending-only diffs.
+* text=auto eol=lf
+
+# Binary assets: never normalise or diff as text.
+*.png  binary
+*.jpg  binary
+*.ico  binary

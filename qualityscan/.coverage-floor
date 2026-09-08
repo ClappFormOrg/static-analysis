@@ -1,0 +1,67 @@
+# Minimum statement coverage for the qualityscan tree.
+#
+# Enforced by this repository's CI, which runs qualityscan/cmd/covergate over the
+# module's own unit suite. Same mechanism and same file name the tool asks a
+# consuming repository for, so the tool is gated the way it gates.
+#
+# WHAT IS MEASURED
+#
+# `go test ./...` across the whole module -- the scanner package, the four
+# commands under cmd/, and internal/gomarker.
+#
+# QUALITYSCAN_CONFIG_DIR is deliberately NOT set for this measurement. Five tests
+# validate a consuming repository's config files and skip when nothing points them
+# at one, so a checkout of this repository on its own runs without them. The floor
+# is the number that checkout reads, not the higher one a consumer's config dir
+# produces: a floor measured with tests this repository cannot run would fail here
+# and pass nowhere.
+#
+# Nothing here is generated, so covergate's generated/hand-written split is a
+# no-op on this module. It is still the tool doing the measuring, because a
+# second way of turning a profile into a percentage is a second way for two
+# gates to disagree.
+#
+# WHERE THE NUMBER CAME FROM
+#
+# 88.98% measured on the extraction commit, 2,793 of 3,139 statements, with
+# QUALITYSCAN_CONFIG_DIR unset. The floor stays at 88.9, where it was set when the
+# same suite read 89.10% with a config dir pointing at one: the difference is the
+# five skipped config tests plus three checks that read a consuming repository's
+# pin files by relative path and could not follow the tool out of it. That leaves
+# room for 2 more uncovered statements, which is tight -- a change that adds an
+# untested branch should expect to add its test in the same commit.
+#
+# The per-package figures behind it, and what each still leaves out:
+#
+#   qualityscan        86.8%  publish.go's five gh-shelling functions and
+#                             main.go's entry point. Both need the process
+#                             boundary faked, and neither has a seam to fake it
+#                             through -- gh() calls exec.Command inline, and
+#                             run() reads the global flag.CommandLine. Reaching
+#                             them means changing production code to be
+#                             testable, which is not a trade this repo makes for
+#                             a coverage point.
+#   cmd/covergate      97.2%  main(), one provably unreachable defensive branch
+#                             in RaiseTo, and a WriteString error arm.
+#   cmd/toolgate       95.8%  main(), four statements of run + Fprintf + Exit.
+#   cmd/ratchetpatch   93.4%  main(), two break guards for truncated `git -z`
+#                             output git does not emit, and error arms whose
+#                             triggering input git reports as D rather than M.
+#   cmd/crosscheck    100.0%
+#   internal/gomarker 100.0%
+#
+# The residue is almost entirely main() functions: run + Fprintf + os.Exit, in
+# five packages. They are worth about 1.5 points between them and testing them
+# needs either a subprocess re-exec whose counters do not always merge back into
+# the profile, or an injected exit function in production code. Neither buys a
+# behaviour that the run() tests do not already pin.
+#
+# A MODULE FLOOR IS NOT A PER-PACKAGE FLOOR
+#
+# covergate gates on the module total, so this number cannot by itself stop one
+# package sliding while another climbs. The scanner package is 2,454 of the 3,139
+# statements, so it dominates: cmd/crosscheck could fall from 100% to 0% and the
+# module would still read 85.2%, clearing this floor. If per-package protection
+# is wanted later, it is a covergate feature (a floor per package, read from the
+# same file), not something to fake by running the tool six times.
+88.9

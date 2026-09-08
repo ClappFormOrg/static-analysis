@@ -1,0 +1,100 @@
+name: ci
+
+# Both tools' suites, their vet pass, and their coverage floors.
+#
+# Nothing here needs a network beyond the checkout and the toolchain: both tools
+# are stdlib only, so there is no dependency to resolve and no lockfile to cache.
+#
+# Actions are pinned by commit SHA rather than by tag, so a compromised or
+# retagged release cannot change what runs on a push.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  go:
+    name: qualityscan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
+        with:
+          go-version-file: go.mod
+
+      # gofmt before vet: an unformatted file is the cheapest failure to read,
+      # and `gofmt -l` prints the file list rather than a diff.
+      - name: gofmt
+        run: |
+          unformatted="$(gofmt -l .)"
+          if [ -n "$unformatted" ]; then
+            echo "::error::gofmt would rewrite these files:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go test
+        run: go test ./... -count=1 -covermode=atomic -coverprofile=cover.out
+
+      # The tool gates itself with its own command, so a break in covergate's
+      # profile handling fails the run that would have shipped it.
+      #
+      # QUALITYSCAN_CONFIG_DIR is deliberately unset. Five tests validate a
+      # consuming repository's config files and skip without it, and the floor in
+      # qualityscan/.coverage-floor is the number a bare checkout reads.
+      - name: Coverage floor
+        run: |
+          go run ./qualityscan/cmd/covergate \
+            -dir . -profile cover.out \
+            -floor qualityscan/.coverage-floor \
+            -summary "$GITHUB_STEP_SUMMARY" \
+            -gate
+
+      # The scanner over its own source. Advisory: it exits 0 whatever it finds,
+      # because a standing backlog in the tool is not a reason to block a fix to
+      # the tool. It is here so the findings arrive on the PR that adds them.
+      - name: Self-scan
+        run: go run ./qualityscan -root . -prefix static-analysis -format text
+
+  node:
+    name: dupescan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: 26
+
+      - name: node --test
+        run: node --test dupescan/dupescan.test.mjs
+
+      # Node has had a coverage threshold built in since v22, so unlike the Go
+      # half this needs no tool of ours. Lines only, and dupescan/.coverage-floor
+      # records why branches and functions are not gated: both move between runs
+      # of an unchanged tree, because merged subprocess V8 coverage is not
+      # byte-stable.
+      - name: Coverage floor
+        run: |
+          floor="$(grep -v '^#' dupescan/.coverage-floor | tr -d '[:space:]')"
+          echo "Line coverage floor: $floor%"
+          node --experimental-test-coverage \
+            --test-coverage-lines="$floor" \
+            --test dupescan/dupescan.test.mjs
+
+      # dupescan over this repository. Both tools are checked by the other's
+      # sibling: the Go job self-scans, and this one reads the Go source here for
+      # a concept declared twice.
+      - name: Self-scan
+        run: node dupescan/dupescan.mjs --root qualityscan

@@ -1,0 +1,42 @@
+# Minimum LINE coverage for dupescan.
+#
+# Enforced by this repository's CI, which passes this number to
+# `node --test-coverage-lines`. Node has had a coverage threshold built in since
+# v22, so unlike the two Go modules this one needs no tool of ours -- but the
+# number still lives in a file of its own, read by the Makefile, for the same
+# reason qualityscan/.coverage-floor does: a threshold spelled twice is a
+# threshold that can drift between the gate a developer runs and the gate that
+# blocks a merge.
+#
+# WHAT IS MEASURED
+#
+# `node --experimental-test-coverage --test dupescan/dupescan.test.mjs`,
+# which is the same suite the CI test job runs. Node merges V8 coverage from
+# child processes, so the tests that drive the scanner as a command -- the only
+# way to reach walk(), loadConfig(), parseArgs() and main(), none of which are
+# exported -- count towards this figure.
+#
+# WHERE THE NUMBER CAME FROM
+#
+# 100.00% of lines measured on this branch, with the ranking, severity, CLI and
+# reporting tests added: every line of dupescan.mjs is executed by the suite.
+# Set to 99.5, which is about three lines of slack in a 770-line file.
+#
+# LINES ONLY, DELIBERATELY
+#
+# Node can also gate on branches and functions. Neither is used here:
+#
+#   branches   moves between 96.59% and 97.06% across runs of an unchanged
+#              tree, because merged subprocess V8 coverage is not byte-stable.
+#              A gate on it would fail intermittently with no code change, and a
+#              gate that fails at random is one people learn to re-run rather
+#              than read.
+#   functions  reads 89.39%, but the figure is not comparable with the 75.00%
+#              this file's suite scored before, because subprocess coverage
+#              reports functions at a finer granularity than the in-process
+#              import did. A floor on a denominator that changes with how the
+#              tests are invoked measures the harness, not the code.
+#
+# Lines held identical across every run of both measurements, which is why it is
+# the one carrying the threshold.
+99.5
