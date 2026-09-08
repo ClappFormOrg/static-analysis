@@ -383,7 +383,7 @@ func TestCombinedCarriesNoVerdict(t *testing.T) {
 // TestNonUnitLOCIsReportedNotFolded pins the denominator. Folding non-unit lines
 // in would understate every tail, and omitting the figure entirely would hide a
 // profile that speaks for a fraction of the tree -- which is exactly how the
-// 2026-07-31 vendor export went unnoticed.
+// a partial scan of a tree went unnoticed.
 func TestNonUnitLOCIsReportedNotFolded(t *testing.T) {
 	l := profileOf(UnitSet{
 		Language: "x", Units: []Unit{unit(50, 30, 0), unit(50, 1, 0)}, NonUnitLOC: 900,

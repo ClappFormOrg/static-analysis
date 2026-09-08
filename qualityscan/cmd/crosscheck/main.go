@@ -252,7 +252,7 @@ func median(v []float64) float64 {
 }
 
 // outsideBand counts the ratios outside the 0.75-1.33 band the README uses for
-// the vendor calibration, so the two comparisons read the same way.
+// the threshold calibration, so the two comparisons read the same way.
 func outsideBand(v []float64) int {
 	n := 0
 	for _, r := range v {

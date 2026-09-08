@@ -12,11 +12,11 @@ import (
 	"strings"
 )
 
-// The rules in this file are the ones the vendor's catalogue lists but scores
-// zero on for Go, because it has no Go implementation of them -- not because
-// the codebase is clean. They are separated from the eight rules in report.go
-// for that reason: those reproduce a vendor measurement, these fill a hole in
-// it, and only the first group can be diffed against a vendor export.
+// The rules in this file are the ones a standard best-practice catalogue lists
+// but that a commercial scanner commonly scores zero on for Go, having no Go
+// implementation of them rather than because the codebase is clean. They are
+// separated from the rules in report.go for that reason: those reproduce a
+// measurement another tool also makes, these fill a hole in it.
 //
 // Rules a golangci-lint config already covers are deliberately absent:
 // `Duplicate` is dupl, and the resource open/close family is bodyclose,
@@ -298,8 +298,8 @@ func rootIdent(e ast.Expr) string {
 // -- Statement rules ----------------------------------------------------------
 
 // emptyBranches reports an `if` with an empty body and no else. It is Go's
-// version of the vendor's "empty catch": most of them are `if err != nil {}`,
-// a condition someone meant to handle and did not.
+// version of the "empty catch" rule: most of them are `if err != nil {}`, a
+// condition someone meant to handle and did not.
 func (idx *Index) emptyBranches() []Finding {
 	return idx.perFunc(func(f *File, element string, fd *ast.FuncDecl) []Finding {
 		var out []Finding

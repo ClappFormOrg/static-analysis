@@ -72,23 +72,24 @@ taking it.
 
 ## Calibration: two bands were fitted against one codebase
 
-Most of `qualityscan`'s bands are the external vendor's own printed numbers. Two
-were fitted against **one large Go codebase**, the first one the scanner
-measured:
+Most of `qualityscan`'s bands are the conventional published numbers for these
+metrics. Two were fitted against **one large Go codebase**, the first one the
+scanner measured:
 
-- **`dependency_span`** is rescaled by about a quarter from the vendor's printed
-  30/40, because span at package granularity runs below their scale. The
-  rescaling came from that codebase's own distribution.
+- **`dependency_span`** is rescaled by about a quarter from the published 30/40,
+  because span at package granularity runs below the scale those are set for.
+  The rescaling came from that codebase's own distribution.
 - **`complexity`** is anchored to `gocognit`'s own `min-complexity` rather than
-  to the vendor's 30/50, because the vendor's "function nesting complexity" is a
+  to the published 30/50, which are set for "function nesting complexity", a
   different metric whose numbers do not transfer.
 
 Both are reasonable starting points for another Go codebase and neither is a
 measurement of one. **Re-fitting takes no code change:** dump the raw
 measurements with `qualityscan -root <module> -format metrics -out metrics.csv`,
-pick the cut that puts the intended share of rows above it -- the vendor's own
-scale is roughly the worst 5% HIGH and the worst 1% VERY HIGH -- and write the two
-bands into the repository's `-config` file. Absent fields keep their default.
+pick the cut that puts the intended share of rows above it -- a conventional
+scale puts roughly the worst 5% in HIGH and the worst 1% in VERY HIGH -- and
+write the two bands into the repository's `-config` file. Absent fields keep
+their default.
 
 Leaving them where they are is also a defensible choice, as long as it is a
 choice: a band that reports nothing looks exactly like a codebase with nothing to

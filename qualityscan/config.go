@@ -6,14 +6,14 @@ import (
 	"os"
 )
 
-// Severity mirrors the only two risk bands the vendor scan reports for its
-// threshold rules. Anything below High is not emitted at all -- the vendor
-// export contains no low or medium rows, so neither does ours.
+// Severity is the two risk bands a threshold rule can report. Anything below
+// High is not emitted at all: a measurement inside every band is not a finding,
+// and a report padded with them buries the ones worth acting on.
 type Severity int
 
 const (
 	// SeverityNone is the zero value: a measurement inside every band, which
-	// is emitted nowhere because the export carries no rows for it.
+	// is emitted nowhere.
 	SeverityNone Severity = iota
 	// SeverityHigh is a value over a band's High threshold and at or under its
 	// VeryHigh one.
@@ -21,12 +21,11 @@ const (
 	// SeverityVeryHigh is a value over a band's VeryHigh threshold.
 	SeverityVeryHigh
 	// SeverityFinding is for the rules that have no numeric band (cycles,
-	// hardcoded literals). The vendor calls these "violations" and "findings".
+	// hardcoded literals), where the finding is the whole verdict.
 	SeverityFinding
 )
 
-// String renders the severity the way the vendor's export spells it, so a
-// finding printed here and the same finding in their CSV read alike.
+// String renders the severity as the report and the CSV spell it.
 func (s Severity) String() string {
 	switch s {
 	case SeverityHigh:
@@ -42,9 +41,9 @@ func (s Severity) String() string {
 
 // Band is a two-threshold risk scale. A value strictly greater than High is
 // high risk; strictly greater than VeryHigh is very high risk. The bounds are
-// exclusive because that is how the vendor's printed ranges read: "function
-// size in tokens: 806 (very high risk, [> 500])" and "[201 - 500]" for high,
-// which is High=200, VeryHigh=500.
+// exclusive, which is the convention the published ranges use: a size of 806
+// tokens reads as "(very high risk, [> 500])" and the high band as "[201 -
+// 500]", which is High=200, VeryHigh=500.
 type Band struct {
 	High     int `json:"high"`
 	VeryHigh int `json:"very_high"`
@@ -63,8 +62,8 @@ func (b Band) Rate(v int) Severity {
 	}
 }
 
-// Describe renders the band the value fell into the way the vendor export does,
-// so a row from this tool and a row from the export read identically.
+// Describe renders the band the value fell into, in the conventional notation
+// for a risk range, so a row reads the same way in every format.
 func (b Band) Describe(v int) string {
 	switch b.Rate(v) {
 	case SeverityVeryHigh:
@@ -77,9 +76,8 @@ func (b Band) Describe(v int) string {
 }
 
 // Config holds every threshold and scope decision the scan makes. The defaults
-// were reverse-engineered from the vendor's own exports and are its printed
-// bands wherever the two tools measure the same thing, which is everywhere
-// except Complexity and DependencySpan. See README.md for how each was derived.
+// are the conventional published bands for these metrics, except for Complexity
+// and DependencySpan, which are fitted. See README.md for how each was derived.
 type Config struct {
 	// FunctionSize counts Go lexical tokens in a function declaration,
 	// signature and body together.
@@ -87,13 +85,10 @@ type Config struct {
 	// Parameters counts declared parameters. The receiver is excluded and a
 	// variadic parameter counts as one.
 	Parameters Band `json:"parameters"`
-	// CountParameterGroups counts `a, b int` as one parameter rather than
-	// two. Off by default; see countParams.
-	CountParameterGroups bool `json:"count_parameter_groups"`
-	// Complexity is cognitive complexity (nesting-weighted). This is the one
-	// threshold rule whose bands are NOT the vendor's printed ones: its
-	// "function nesting complexity" is a different metric, so its numbers do
-	// not transfer. See README.md, "Complexity is not the vendor's metric".
+	// Complexity is cognitive complexity (nesting-weighted). Its bands are not
+	// the conventional published ones, which are set for a different metric
+	// ("function nesting complexity") whose numbers do not transfer. See
+	// README.md, "Complexity".
 	Complexity Band `json:"complexity"`
 	// DependencyVolume counts, per file, every identifier reference that
 	// resolves to a declaration outside that file.
@@ -158,7 +153,7 @@ type Config struct {
 	// ExcludeDirs are path prefixes (relative to the scan root, slash
 	// separated) that are skipped entirely.
 	ExcludeDirs []string `json:"exclude_dirs"`
-	// IncludeTests scans _test.go files too. The vendor export contains no
+	// IncludeTests scans _test.go files too. The default report contains no
 	// test findings, so this is off by default.
 	IncludeTests bool `json:"include_tests"`
 	// SkipGeneratedFiles drops any file carrying the Go toolchain's
@@ -169,28 +164,28 @@ type Config struct {
 	// and a finding on a file `make codegen-enums` overwrites is a finding
 	// nobody can act on. The marker is read by internal/gomarker, shared with
 	// the coverage gate so the two cannot disagree about which files are
-	// machine-written. On by default; the vendor-parity run turns it off, since
-	// the vendor scanned those files.
+	// machine-written. On by default; a run comparing this scan against a tool
+	// that measures generated code turns it off.
 	SkipGeneratedFiles bool `json:"skip_generated_files"`
 }
 
-// DefaultConfig is the scan's thresholds: the vendor's numbers where they are
-// the vendor's to set, and a linter's own budget where the two measure the same
+// DefaultConfig is the scan's thresholds: the conventional published numbers
+// for each metric, and a linter's own budget where the two measure the same
 // thing. Every field carries the reasoning for its own value.
 func DefaultConfig() Config {
 	return Config{
 		FunctionSize: Band{High: 200, VeryHigh: 500},
 		Parameters:   Band{High: 4, VeryHigh: 6},
-		// Anchored to `gocognit: min-complexity: 20`, not to the vendor's
-		// 30/50, because this rule and the vendor's are not measuring the same
-		// thing. Both bounds are exclusive and golangci's is too, so High=20
-		// flags exactly what gocognit flags. VeryHigh is twice that line.
+		// Anchored to `gocognit: min-complexity: 20` rather than to the
+		// conventional 30/50, which are set for a different metric. Both bounds
+		// are exclusive and golangci's is too, so High=20 flags exactly what
+		// gocognit flags. VeryHigh is twice that line.
 		Complexity:       Band{High: 20, VeryHigh: 40},
 		DependencyVolume: Band{High: 110, VeryHigh: 200},
-		// Span at package granularity runs about a quarter below the vendor's
-		// scale, so its printed 30/40 bands would leave this rule reporting
-		// nothing at all. Rescaled by that quarter. See README.md, "Two bands
-		// were fitted rather than taken".
+		// Span at package granularity runs about a quarter below the scale the
+		// published 30/40 bands are set for, which would leave this rule
+		// reporting nothing at all. Rescaled by that quarter. See README.md,
+		// "Two bands were fitted rather than taken".
 		DependencySpan:       Band{High: 23, VeryHigh: 33},
 		SpanGranularity:      "package",
 		ModuleCouplingCounts: defaultModuleCouplingCounts,

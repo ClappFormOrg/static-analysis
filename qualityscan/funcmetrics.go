@@ -10,7 +10,7 @@ import (
 )
 
 // FuncMetrics are the per-function measurements. The first three are the ones
-// the vendor scan reports; LOC and McCabe are the SIG model's own metrics and
+// the threshold rules report; LOC and McCabe are the SIG model's own metrics and
 // are measured alongside them rather than instead of them, because the two sets
 // are not interchangeable -- see sigprofile.go.
 type FuncMetrics struct {
@@ -21,24 +21,24 @@ type FuncMetrics struct {
 	Params     int
 	Complexity int
 	// LOC is the SIG unit-size metric: distinct lines of the declaration that
-	// carry at least one non-comment token. The vendor measures size in tokens
-	// instead, which is why both are here.
+	// carry at least one non-comment token. FUNCTION_SIZE_RISK measures size in
+	// tokens instead, which is why both are here.
 	LOC int
 	// McCabe is cyclomatic complexity, which is what the SIG model means by
 	// unit complexity. Complexity above is cognitive complexity, a different
 	// metric with a different scale; neither substitutes for the other.
 	McCabe int
 	// HasBody is false for a declaration with no Go body -- an assembly or cgo
-	// stub. It is still measured, because the vendor-parity rules have always
-	// counted it, but it is not a unit of *executable* code, so the SIG profile
+	// stub. It is still measured, because the threshold rules count it, but it
+	// is not a unit of *executable* code, so the SIG profile
 	// leaves it out rather than padding the denominator with it.
 	HasBody bool
 }
 
 // measureFuncs computes the per-function metrics for every top-level function
 // and method in the index. Function literals are measured as part of their
-// enclosing function, which is how the vendor attributes them too -- every
-// element name in the export is a named function.
+// enclosing function, matching the model's definition of a unit as the smallest
+// NAMED piece of executable code.
 func (idx *Index) measureFuncs() []FuncMetrics {
 	var out []FuncMetrics
 	for _, f := range idx.Files {
@@ -52,7 +52,7 @@ func (idx *Index) measureFuncs() []FuncMetrics {
 				File:       f,
 				Line:       idx.Fset.Position(fd.Pos()).Line,
 				Tokens:     idx.countTokens(f, fd),
-				Params:     countParams(fd, idx.Cfg.CountParameterGroups),
+				Params:     countParams(fd),
 				Complexity: cognitiveComplexity(fd),
 				LOC:        idx.countLOC(f, fd),
 				McCabe:     mccabeComplexity(fd),
@@ -64,9 +64,9 @@ func (idx *Index) measureFuncs() []FuncMetrics {
 }
 
 // element renders a function the way it is written in Go: `Name` for a plain
-// function, `(*Recv).Name` for a method. The vendor export renders methods with
-// the receiver in the parameter slot, which reads as though the receiver were
-// the argument list. Ours is unambiguous and greppable.
+// function, `(*Recv).Name` for a method. Some scanners render a method with the
+// receiver in the parameter slot, which reads as though the receiver were the
+// argument list. This spelling is unambiguous and greppable.
 func (idx *Index) element(fd *ast.FuncDecl) string {
 	if fd.Recv == nil || len(fd.Recv.List) == 0 {
 		return fd.Name.Name
@@ -203,26 +203,23 @@ func mccabeComplexity(fd *ast.FuncDecl) int {
 	return n
 }
 
-// countParams counts declared parameters. The receiver is excluded -- the
-// vendor counted `NewPromoter`'s eight parameters and it has no receiver, and a
-// receiver is not something a caller passes -- and a variadic counts as one.
+// countParams counts declared parameters. The receiver is excluded, since it is
+// not something a caller passes, and a variadic counts as one.
 //
-// byGroup counts declaration groups instead of names, so `a, b int` is one
-// rather than two. Names is the default because it is what a caller has to
-// supply at the call site; grouping is a way of writing the signature, not a
-// property of it.
-func countParams(fd *ast.FuncDecl, byGroup bool) int {
+// Names are counted rather than declaration groups, so `a, b int` is two: that
+// is what a caller has to supply at the call site, and grouping is a way of
+// writing the signature rather than a property of it.
+func countParams(fd *ast.FuncDecl) int {
 	if fd.Type.Params == nil {
 		return 0
 	}
 	n := 0
 	for _, field := range fd.Type.Params.List {
-		switch {
-		case byGroup, len(field.Names) == 0:
-			n++ // one group, or one unnamed parameter
-		default:
-			n += len(field.Names)
+		if len(field.Names) == 0 {
+			n++ // one unnamed parameter
+			continue
 		}
+		n += len(field.Names)
 	}
 	return n
 }
@@ -236,17 +233,16 @@ func countParams(fd *ast.FuncDecl, byGroup bool) int {
 // can cross-check one against the other. The thresholds in config.go are
 // gocognit's for that reason.
 //
-// It is NOT the vendor's "function nesting complexity", which an earlier
-// version of this file assumed on the strength of the name. On a flat dispatch
-// of switches the vendor scores several times what this returns, and this one is
-// right by the spec: the metric charges once per switch rather than once per
-// case. The vendor also runs well above this on functions containing no switch
-// at all, so its extra weight is not switch fan-out either. Reproducing it would
-// mean guessing at an undocumented formula from a handful of data points and
-// giving up the gocognit cross-check, so this rule tracks a metric that can be
-// defined instead of one it could only imitate. What the vendor catches and this
-// does not is breadth, and a function broad enough to score that high there
-// trips FUNCTION_SIZE_RISK here anyway.
+// It is NOT "function nesting complexity", the similarly named metric some
+// commercial scanners report, which an earlier version of this file assumed on
+// the strength of the name. That metric scores several times higher on a flat
+// dispatch of switches, where this one is right by the spec: cognitive
+// complexity charges once per switch rather than once per case. It also runs
+// well above this on functions containing no switch at all, so the extra weight
+// is not switch fan-out either, and its formula is not published. This rule
+// tracks a metric that can be defined, and keeps the gocognit cross-check.
+// Breadth is what it does not catch, and a function broad enough to score high
+// on the other metric trips FUNCTION_SIZE_RISK here anyway.
 // A declaration with no body -- an assembly or cgo stub -- scores 0 and must be
 // rejected here rather than in walkBody. walkBody's `n == nil` guard cannot
 // catch it: a nil *ast.BlockStmt boxed into an ast.Node is an interface with a

@@ -1,8 +1,8 @@
 # qualityscan
 
-A local reimplementation of the best-practice checks a static analysis vendor
-runs over a Go tree, so they can be run on any commit, in CI, and without
-uploading the source anywhere.
+A local implementation of the best-practice maintainability checks a commercial
+static analysis product runs over a Go tree, so they can be run on any commit,
+in CI, and without uploading the source anywhere.
 
 Stdlib only, no configuration of its own, about 0.3s over a 100k-line module. It
 reads the tree as source text rather than building it, so it works on a branch
@@ -27,7 +27,7 @@ consuming repository should hold in one file.
 
 ```
 qualityscan -root . -format text                    # summary table plus every finding
-qualityscan -root . -format csv -out scan.csv       # sectioned CSV, for diffing against a vendor export
+qualityscan -root . -format csv -out scan.csv       # sectioned CSV, for diffing against another scanner
 qualityscan -root . -format markdown -out scan.md   # one markdown write-up
 qualityscan -root . -format sigprofile              # the SIG maintainability profile
 qualityscan -root . -format metrics -out m.csv      # raw measurements, for re-fitting thresholds
@@ -133,20 +133,20 @@ checkout of the tool on its own has nothing to validate.
 
 ### Two bands were fitted rather than taken
 
-Most default bands are the vendor's own printed numbers. Two are not, and both
-were fitted against one large Go codebase:
+Most default bands are the conventional published numbers for these metrics.
+Two are not, and both were fitted against one large Go codebase:
 
-- **`dependency_span`** is rescaled by about a quarter from the vendor's printed
-  bands, because span at package granularity runs below their scale.
+- **`dependency_span`** is rescaled by about a quarter from the published bands,
+  because span at package granularity runs below the scale those are set for.
 - **`complexity`** is anchored to `gocognit`'s own threshold rather than to the
-  vendor's, because the vendor's "function nesting complexity" is a different
+  published 30/50, which are set for "function nesting complexity", a different
   metric whose numbers do not transfer. See "Complexity" below.
 
 Both are reasonable starting points for another Go codebase and neither is a
 measurement of one. **Re-fitting takes no code change:** dump the raw
 measurements with `-format metrics`, pick the cut that puts the intended share
-of rows above it (the vendor's own scale is roughly the worst 5% HIGH and the
-worst 1% VERY HIGH), and write the two bands into the repository's `-config`
+of rows above it (a conventional scale puts roughly the worst 5% in HIGH and the
+worst 1% in VERY HIGH), and write the two bands into the repository's `-config`
 file. Absent fields keep their default.
 
 Leaving them where they are is also a defensible choice, as long as it is a
@@ -161,14 +161,14 @@ that, not a consumer's overrides.
 | `CYCLIC_REFERENCE` | import | A directory-level reference cycle. |
 | `FUNCTION_SIZE_RISK` | function | Go lexical tokens in the declaration, signature and body together. |
 | `PARAMETER_RISK` | function | Declared parameters, receiver excluded, variadic counts one. |
-| `FUNCTION_COMPLEXITY_RISK` | function | Cognitive complexity (Campbell/SonarSource). Shares the vendor's rule id but not its metric; see below. |
+| `FUNCTION_COMPLEXITY_RISK` | function | Cognitive complexity (Campbell/SonarSource). Shares the standard rule id but not the metric usually reported under it; see below. |
 | `DEPENDENCY_VOLUME_RISK` | file | Every identifier occurrence resolving outside the file. |
 | `DEPENDENCY_SPAN_RISK` | file | Distinct targets those references reach. |
 | `HARDCODED_URL` | literal | String literal containing `scheme://host`, unless the host is an identifier or a reference rather than an address. |
 | `HARDCODED_PATH` | literal | String literal addressing the filesystem. |
 | `COPYRIGHT_OR_LICENSE_NOTICE` | comment | A genuine copyright mark, SPDX tag, "all rights reserved" line, or named open-source license grant, not the word "license" used as a verb. |
 
-And the gap rules, which have no vendor counterpart:
+And the gap rules, which a commercial scan commonly scores zero on for Go:
 
 | Rule | Measured over | Definition |
 | --- | --- | --- |
@@ -219,16 +219,16 @@ Span counts one target per *package* by default, so it reads as "how many
 neighbourhoods does this file touch". Set `"span_granularity": "file"` to count
 each in-module file separately; that runs roughly 2.5x higher.
 
-**Complexity is not the vendor's metric.** This is the one rule that shares a
-name with the vendor's and measures something different, so the two numbers must
-not be compared. "Function nesting complexity" makes cognitive complexity the
-obvious reading, but the vendor's scores do not reconcile with it: on a flat
-dispatch of switches the Campbell/SonarSource definition charges once per switch
-rather than once per case, and the vendor runs well above that on functions
-containing no switch at all, so its extra weight is not switch fan-out either.
-Reproducing it would mean guessing at an undocumented formula from a handful of
-data points and giving up the cross-check against `gocognit`. The rule instead
-tracks a metric that can be defined, at `gocognit`'s own threshold.
+**Complexity.** This rule carries the standard id but not the metric usually
+reported under it, so the two numbers must not be compared. "Function nesting
+complexity" makes cognitive complexity the obvious reading, but the scores do
+not reconcile: on a flat dispatch of switches the Campbell/SonarSource
+definition charges once per switch rather than once per case, and the other
+metric runs well above it on functions containing no switch at all, so the extra
+weight is not switch fan-out either. Its formula is not published, so
+reproducing it would mean guessing from a handful of data points and giving up
+the cross-check against `gocognit`. The rule instead tracks a metric that can be
+defined, at `gocognit`'s own threshold.
 
 **Hardcoded paths.** The implementation requires a Windows drive prefix, a `~/`
 prefix, a known filesystem root (`/etc/`, `/opt/`, `/var/`, and so on), an
@@ -249,21 +249,20 @@ ordinary verb out of the results.
 
 ## Thresholds
 
-Defaults are in `config.go`. They are the round numbers the vendor prints in its
-own descriptions wherever the two tools measure the same thing, which is
-everywhere except the two marked below:
+Defaults are in `config.go`. They are the conventional published numbers for
+each metric, except for the two marked below:
 
 | Rule | high | very high | source |
 | --- | --- | --- | --- |
-| Function size (tokens) | > 200 | > 500 | vendor |
-| Parameters | > 4 | > 6 | vendor |
+| Function size (tokens) | > 200 | > 500 | published |
+| Parameters | > 4 | > 6 | published |
 | Complexity | > 20 | > 40 | `gocognit`'s own threshold |
-| Dependency volume | > 110 | > 200 | vendor |
-| Dependency span | > 23 | > 33 | vendor's bands rescaled to package granularity |
+| Dependency volume | > 110 | > 200 | published |
+| Dependency span | > 23 | > 33 | published bands rescaled to package granularity |
 
-A threshold copied from a vendor description is only meaningful if the number
-underneath it is on the vendor's scale, and for those two it is not. Left at the
-vendor's printed bands, both reported nothing at all.
+A published threshold is only meaningful if the number underneath it is on the
+same scale, and for those two it is not. Left at the published bands, both
+reported nothing at all.
 `TestEveryRuleStillFires` fails when a default moves out of reach of a fixture
 built to trip it, because a rule that matches nothing looks exactly like a rule
 with nothing to match.
@@ -677,7 +676,7 @@ per issue with YAML front matter instead, for editing the wording first.
 | `-repo` | inferred | `owner/name` to publish to. |
 | `-reopen` | off | Also update issues someone has closed. |
 
-`csv` reproduces the vendor export's sectioned layout, a bare rule name, a
-header row, then rows numbered from 1 within the section, so the two can be
-diffed directly. Rules that found nothing still get a section, because "0
+`csv` is a sectioned layout, a bare rule name, a header row, then rows numbered
+from 1 within the section. That is what a commercial scan exports, so the two
+can be diffed directly. Rules that found nothing still get a section, because "0
 violations" is the half of the report that says the check ran.

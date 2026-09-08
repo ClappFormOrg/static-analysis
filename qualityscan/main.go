@@ -1,12 +1,12 @@
-// Command qualityscan reports the best-practice checks an external static
-// analysis vendor runs over a Go tree, computed locally from the source so they
-// can be run on any commit, in CI, and without an upload.
+// Command qualityscan reports the best-practice maintainability checks a
+// commercial static analysis product runs over a Go tree, computed locally from
+// the source so they can be run on any commit, in CI, and without an upload.
 //
-//	qualityscan -root api -format text
+//	qualityscan -root . -format text
 //	qualityscan -root . -format csv -out scan.csv
 //
-// See README.md for what each rule measures and how its thresholds were
-// derived from the vendor's own export.
+// See README.md for what each rule measures and where its thresholds come
+// from.
 package main
 
 import (

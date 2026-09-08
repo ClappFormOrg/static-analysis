@@ -162,7 +162,7 @@ func (m Module) Incoming(counts string) int {
 // measureModules measures every file in the index as a module.
 //
 // It runs its own resolver pass rather than sharing measureDeps'. The two are
-// called from different formats -- measureDeps serves the vendor-parity rules,
+// called from different formats -- measureDeps serves the threshold rules,
 // this serves the SIG profile -- so sharing would cost a pass in whichever
 // format needed only one of them, and the resolver is the cheap half of a scan
 // that takes about a third of a second over the whole API.

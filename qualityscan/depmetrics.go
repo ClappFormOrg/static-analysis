@@ -45,14 +45,13 @@ type FileDeps struct {
 // resolve at all. A file that leans on same-package declarations therefore
 // scores closer to its true weight than one that leans on injected
 // dependencies, which is why a persistence layer outranks a service layer here
-// by more than it does in the vendor's export. VolumeLocal and VolumeCross are
+// by more than a type-checked implementation would. VolumeLocal and VolumeCross are
 // reported separately by `-format metrics` so that skew is visible rather than
 // something to rediscover.
 //
-// Counting sibling-file references is deliberate and was checked against a
-// vendor export rather than assumed: dropping them moves the median agreement
-// with the vendor materially further away and widens the spread. The vendor
-// counts them too.
+// Counting sibling-file references is deliberate and was checked against
+// another tool's output rather than assumed: dropping them moves the median
+// agreement materially further away and widens the spread.
 func (idx *Index) measureDeps() []FileDeps {
 	out := make([]FileDeps, 0, len(idx.Files))
 	for _, f := range idx.Files {
@@ -71,7 +70,7 @@ func (idx *Index) measureDeps() []FileDeps {
 
 		out = append(out, FileDeps{
 			File: f,
-			// The vendor anchors a file-level finding to a line inside the
+			// The convention is to anchor a file-level finding to a line inside the
 			// file rather than to line 1; the package clause is the one line
 			// every Go file has and is where the imports that drive the score
 			// begin.

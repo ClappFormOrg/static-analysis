@@ -26,7 +26,7 @@ func TestIsFilesystemPath(t *testing.T) {
 		{"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", false},
 		{"text/csv", false},
 
-		// SQL fragments -- what the vendor scan mistook for paths, because of
+		// SQL fragments -- what a looser implementation mistakes for paths, because of
 		// the escaped backslash in the ESCAPE clause.
 		{` ILIKE ? ESCAPE '\'`, false},
 		{"AND (u.first_name ILIKE ? ESCAPE ", false},

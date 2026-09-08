@@ -15,7 +15,7 @@ import (
 
 // The SIG risk-profile distribution.
 //
-// The rest of this tool reimplements the external vendor's best-practice rules,
+// The rest of this tool reimplements the standard best-practice rules,
 // which report violation COUNTS against a single gate threshold. That is not how
 // the SIG maintainability model works, and reading a gate count as if it were a
 // SIG measure is a specific mistake worth carrying a caveat about wherever both
@@ -112,7 +112,7 @@ type UnitSet struct {
 	// Reported rather than folded in, because the caps are about code residing
 	// IN units, and because a profile that silently covers a third of the tree
 	// looks exactly like one that covers all of it. That is not hypothetical: a
-	// vendor export has been found to have read a fraction of a tree's files,
+	// commercial scan has been found to have read a fraction of a tree's files,
 	// with only its volume metrics giving it away.
 	NonUnitLOC   int    `json:"non_unit_loc"`
 	FilesScanned int    `json:"files_scanned"`
@@ -253,15 +253,15 @@ func (p UnitProperty) elements(units []Unit) []Element {
 // sigProperties are the three unit-level properties, with the boundaries and the
 // 4-star caps quoted from SIGModel SIGModelVersion.
 //
-// Two of these metrics are NOT the ones the vendor-parity rules in report.go
+// Two of these metrics are NOT the ones the threshold rules in report.go
 // measure, and the difference is deliberate rather than an inconsistency:
 //
 //   - Unit size here is lines of code. FUNCTION_SIZE_RISK counts lexical tokens,
-//     because that is what the vendor counts and that rule is calibrated against
-//     vendor exports to a median ratio of 1.000.
+//     because that is the conventional unit for that rule, and it is calibrated
+//     against another tool's counts to a median ratio of 1.000.
 //   - Unit complexity here is McCabe. FUNCTION_COMPLEXITY_RISK reports cognitive
 //     complexity, which README.md documents at length as not reconcilable with
-//     the vendor's own complexity number.
+//     the conventional complexity number.
 //
 // So both live side by side. Nothing in config.go moves: this profile adds a
 // measurement, it does not retune an existing one.
@@ -378,7 +378,7 @@ type LanguageProfile struct {
 	// Measured is false when the language contributed no units. Such a language
 	// has a zero denominator, and reporting 0.0% against every cap would print
 	// nine passes for a surface nobody measured -- the worst failure available
-	// here, and the one the vendor export actually shipped. So it reports "not
+	// here, and the one a commercial scan actually ships. So it reports "not
 	// measured" instead and the run exits non-zero.
 	Measured bool
 	// Verdicts is false on the combined roll-up.

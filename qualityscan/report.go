@@ -11,8 +11,10 @@ import (
 	"strings"
 )
 
-// Rule ids match the section headers of the vendor export so a row from either
-// tool can be compared without a translation table.
+// Rule ids are the conventional names for these checks, so a finding here lines
+// up with the same finding from another scanner without a translation table.
+// They are also the keys an acceptance file and `disabled_rules` are written
+// against, so renaming one is a breaking change for every consumer.
 const (
 	RuleCyclicReference    = "CYCLIC_REFERENCE"
 	RuleFunctionSize       = "FUNCTION_SIZE_RISK"
@@ -25,9 +27,9 @@ const (
 	RuleCopyrightOrLicense = "COPYRIGHT_OR_LICENSE_NOTICE"
 )
 
-// Gap rules. These have no counterpart in a vendor export -- the vendor's
-// catalogue lists them but scores every one zero, because it has no Go
-// implementation of them. See tier2.go.
+// Gap rules. These are real Go concerns that the standard best-practice
+// catalogues name but that commercial scanners commonly score zero on, having
+// no Go implementation of them. See tier2.go.
 const (
 	RuleSQLInLoop            = "SQL_IN_LOOP"
 	RuleStringConcatInLoop   = "STRING_CONCAT_IN_LOOP"
@@ -41,11 +43,10 @@ const (
 	RuleSwitchWithoutDefault = "SWITCH_WITHOUT_DEFAULT"
 )
 
-// vendorRules are the nine the vendor export contains, in the order it lists
-// its sections, so the two reports can be diffed section by section.
-// COPYRIGHT_OR_LICENSE_NOTICE joined the export later than the rest, so an
-// older export carries no section for it.
-var vendorRules = []string{
+// standardRules are the nine checks a commercial maintainability scan reports,
+// in the order the report lists them. They come first because they are the ones
+// another tool's output can be lined up against.
+var standardRules = []string{
 	RuleCyclicReference,
 	RuleFunctionSize,
 	RuleParameter,
@@ -72,7 +73,7 @@ var gapRules = []string{
 	RuleMissingDoc,
 }
 
-var ruleOrder = append(append([]string{}, vendorRules...), gapRules...)
+var ruleOrder = append(append([]string{}, standardRules...), gapRules...)
 
 // reviewRules are the rules whose findings a reviewer can judge correct as
 // written, so they are the only ones accepted.json may carry entries for. Every
@@ -89,7 +90,7 @@ func isReviewRule(rule string) bool {
 	return slices.Contains(reviewRules, rule)
 }
 
-// Finding is one reported problem, shaped like a row of the vendor export.
+// Finding is one reported problem, shaped like a row of the report's CSV.
 type Finding struct {
 	Rule        string `json:"rule"`
 	Element     string `json:"element"`
@@ -145,10 +146,10 @@ func Run(idx *Index, prefix string) []Finding {
 		}
 		add(RuleFunctionSize, cfg.FunctionSize, m.Tokens, "function size in tokens")
 		add(RuleParameter, cfg.Parameters, m.Params, "parameters")
-		// Deliberately not the vendor's "function nesting complexity" wording:
-		// the rule id matches its section so the two reports can be lined up,
-		// but the number underneath is cognitive complexity and does not
-		// compare. See funcmetrics.go.
+		// Deliberately not the conventional "function nesting complexity"
+		// wording: the rule id is the standard one so findings line up, but the
+		// number underneath is cognitive complexity and the two do not compare.
+		// See funcmetrics.go.
 		add(RuleFunctionComplexity, cfg.Complexity, m.Complexity, "cognitive complexity")
 	}
 
@@ -228,8 +229,9 @@ func literalFinding(rule string, l Literal, qualify func(string) string) Finding
 	}
 }
 
-// WriteCSV emits the sectioned CSV the vendor export uses: a bare rule name on
-// its own line, a header row, then rows numbered from 1 within the section.
+// WriteCSV emits a sectioned CSV: a bare rule name on its own line, a header
+// row, then rows numbered from 1 within the section. That is the layout a
+// commercial scan exports, so the two can be diffed directly.
 // Rules that found nothing still get a section, because "0 violations" is the
 // half of the report that says a check ran.
 func WriteCSV(w io.Writer, findings []Finding) error {

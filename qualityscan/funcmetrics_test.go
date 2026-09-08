@@ -112,25 +112,20 @@ func TestMccabeIgnoresBodylessDeclaration(t *testing.T) {
 
 func TestCountParams(t *testing.T) {
 	tests := []struct {
-		name        string
-		src         string
-		wantNames   int
-		wantByGroup int
+		name string
+		src  string
+		want int
 	}{
-		{"none", "func f() {}", 0, 0},
-		{"receiver excluded", "func (s *S) f(a int) {}", 1, 1},
-		{"grouped names", "func f(a, b, c int) {}", 3, 1},
-		{"mixed", "func f(ctx C, a, b int, opt ...O) {}", 4, 3},
-		{"unnamed", "func f(int, string) {}", 2, 2},
+		{"none", "func f() {}", 0},
+		{"receiver excluded", "func (s *S) f(a int) {}", 1},
+		{"grouped names", "func f(a, b, c int) {}", 3},
+		{"mixed", "func f(ctx C, a, b int, opt ...O) {}", 4},
+		{"unnamed", "func f(int, string) {}", 2},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			fd := firstFunc(t, tc.src)
-			if got := countParams(fd, false); got != tc.wantNames {
-				t.Errorf("countParams(byGroup=false) = %d, want %d", got, tc.wantNames)
-			}
-			if got := countParams(fd, true); got != tc.wantByGroup {
-				t.Errorf("countParams(byGroup=true) = %d, want %d", got, tc.wantByGroup)
+			if got := countParams(firstFunc(t, tc.src)); got != tc.want {
+				t.Errorf("countParams = %d, want %d", got, tc.want)
 			}
 		})
 	}
