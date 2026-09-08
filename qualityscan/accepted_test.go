@@ -122,7 +122,7 @@ func TestApplyAcceptancesPartialMatchIsStale(t *testing.T) {
 }
 
 // Acceptances are written against the module-relative path so a run under
-// -prefix (the vendor-comparison layout) still matches them.
+// -prefix (the layout used to line up with another tool) still matches them.
 func TestApplyAcceptancesIgnoresThePrefix(t *testing.T) {
 	findings := []Finding{nested("internal/a/a.go", "Walk", 10)}
 	open, res := ApplyAcceptances(findings, []Acceptance{

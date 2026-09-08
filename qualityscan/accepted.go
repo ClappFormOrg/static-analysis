@@ -149,7 +149,7 @@ func (r AcceptanceResult) Total() int {
 //
 // prefix is the -prefix the findings were qualified with. Acceptances are
 // written against the module-relative path, so they survive a report being
-// re-run under a different prefix for a vendor comparison.
+// re-run under a different prefix to line up with another tool's paths.
 func ApplyAcceptances(findings []Finding, accs []Acceptance, prefix string) ([]Finding, AcceptanceResult) {
 	result := AcceptanceResult{
 		ByRule:  map[string]int{},

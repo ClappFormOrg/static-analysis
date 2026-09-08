@@ -304,47 +304,13 @@ func TestGeneratedFilesAreNotScanned(t *testing.T) {
 		t.Errorf("scanned %v, want %v", scanned, want)
 	}
 
-	// The vendor-parity run measures generated files because the vendor did, so
-	// the skip has to be something a config can turn back off.
+	// A repository comparing this scan against another tool's output may need
+	// the generated files measured, so the skip has to be something a config can
+	// turn back off.
 	cfg := DefaultConfig()
 	cfg.SkipGeneratedFiles = false
 	if got := len(load(t, files, cfg).Files); got != len(files) {
 		t.Errorf("skip_generated_files=false read %d files, want %d", got, len(files))
-	}
-}
-
-// TestVendorParityConfigMeasuresGeneratedFiles is the calibration guard for the
-// marker rule, matching the one below it for exclude_dirs. A parity run is
-// compared against a vendor export that had no generated-code rule and measured
-// those files, so a parity run that skipped them would report the boundary
-// difference as a findings difference.
-func TestVendorParityConfigMeasuresGeneratedFiles(t *testing.T) {
-	cfg, err := LoadConfig(configFile(t, "vendor-parity.json"))
-	if err != nil {
-		t.Fatalf("LoadConfig(vendor-parity.json): %v", err)
-	}
-	if cfg.SkipGeneratedFiles {
-		t.Error("vendor-parity.json skips generated files; the vendor scanned them, so the parity run must too")
-	}
-}
-
-// TestVendorParityConfigPinsItsOwnExclusions guards the calibration table in
-// README.md. `exclude_dirs` replaces the default list rather than extending it,
-// so a parity run inherits every later addition to the default set unless it
-// names its own — and each such addition would silently restate the vendor
-// comparison as a disagreement it is not.
-func TestVendorParityConfigPinsItsOwnExclusions(t *testing.T) {
-	cfg, err := LoadConfig(configFile(t, "vendor-parity.json"))
-	if err != nil {
-		t.Fatalf("LoadConfig(vendor-parity.json): %v", err)
-	}
-	if len(cfg.ExcludeDirs) == 0 {
-		t.Fatal("vendor-parity.json sets no exclude_dirs, so it inherits the defaults")
-	}
-	for _, e := range cfg.ExcludeDirs {
-		if e == "internal/testhelpers" {
-			t.Error("vendor-parity.json excludes internal/testhelpers; the vendor scanned it, so the parity run must too")
-		}
 	}
 }
 

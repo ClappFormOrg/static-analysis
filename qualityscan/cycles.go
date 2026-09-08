@@ -34,7 +34,7 @@ type Cycle struct {
 // sit at `internal/server/<helper>`. Neither import is a package cycle, but the
 // two directories still point at each other, so neither can be read, moved or
 // extracted without the other. The fix is to hoist the leaf out to its own
-// directory, which is how the cycle the vendor scan first reported here was
+// directory, which is the shape a directory-level cycle usually takes and was
 // resolved.
 //
 // The graph is therefore built over directories truncated to a fixed depth, for

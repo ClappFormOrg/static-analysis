@@ -7,7 +7,7 @@ import (
 )
 
 // The scanner ships no configuration of its own. Acceptances, components,
-// deviations and the vendor-parity thresholds are judgements about ONE
+// deviations and the threshold overrides are judgements about ONE
 // codebase, so they live in the repository being scanned rather than beside
 // the code that reads them -- otherwise every consumer of this tool inherits
 // another project's verdicts, and the tool cannot be extracted without taking

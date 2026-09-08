@@ -53,14 +53,14 @@ func sameFields(got, want []string) bool {
 	return true
 }
 
-// TestCSVKeepsASectionForEveryRule holds the shape the vendor export uses, and
+// TestCSVKeepsASectionForEveryRule holds the sectioned CSV shape, and
 // the reason the empty sections are in it. A rule that found nothing still gets
 // its header and its column row: "0 violations" is the half of a report that
 // says the check ran, and once the section is dropped a reader cannot tell a
 // clean rule from one nobody implemented.
 //
 // Row numbering is the other thing pinned here. Ids restart at 1 inside each
-// section, the way the vendor numbers them, so a counter that ran on across
+// section, which is the layout's convention, so a counter that ran on across
 // sections would make every section after the first disagree with the export it
 // is diffed against.
 func TestCSVKeepsASectionForEveryRule(t *testing.T) {
@@ -334,7 +334,7 @@ func TestJSONCleanScanIsNotNull(t *testing.T) {
 	if got[0] != reportFixture()[0] {
 		t.Errorf("first finding came back as %+v, want %+v", got[0], reportFixture()[0])
 	}
-	// The keys are the vendor export's column names rather than the Go field
+	// The keys are the CSV's column names rather than the Go field
 	// names, because this file is what another tool reads.
 	for _, want := range []string{`"filename"`, `"rule"`, `"element"`} {
 		if !strings.Contains(b.String(), want) {

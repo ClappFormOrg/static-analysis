@@ -19,7 +19,7 @@ type Literal struct {
 
 var (
 	// A scheme followed by an authority. Deliberately not anchored: the
-	// vendor's own hits include URLs embedded in HTML fragments and prose,
+	// a commercial scan's own hits include URLs embedded in HTML fragments and prose,
 	// not just literals that are entirely a URL.
 	urlPattern = regexp.MustCompile(`\b[a-zA-Z][a-zA-Z0-9+.\-]*://[^\s"'<>)\\]+`)
 
@@ -40,7 +40,7 @@ var (
 // filesystemRoots are the absolute prefixes that mean a literal is addressing a
 // real filesystem rather than an HTTP route. Without this list every `/healthz`
 // and `/v1/widgets` in a server codebase reads as a hardcoded path, which is how
-// the vendor scan ended up reporting five SQL fragments and no actual paths.
+// a looser implementation ends up reporting SQL fragments and no actual paths.
 //
 // The names are held bare and slashed by rootPrefixes rather than written out
 // as "/etc/" and friends, because a table of absolute-path literals IS a table

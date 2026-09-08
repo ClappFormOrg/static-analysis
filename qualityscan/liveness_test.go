@@ -11,9 +11,9 @@ import (
 // A threshold rule that stops matching does not fail anything: it reports zero,
 // the summary table prints a zero, and a zero reads as good news. That is how
 // FUNCTION_COMPLEXITY_RISK and DEPENDENCY_SPAN_RISK came to sit at zero across
-// the whole API for a full release cycle while the vendor's export was naming
+// a whole module for a full release cycle while another tool's output was naming
 // sixteen findings between them -- the thresholds had been set from the
-// vendor's printed bands for metrics that turned out not to be on the vendor's
+// the conventional printed bands for metrics that turned out not to be on that
 // scale, so nothing in the codebase could reach them.
 //
 // The fixture below is built to trip every rule at the DEFAULT thresholds, so
