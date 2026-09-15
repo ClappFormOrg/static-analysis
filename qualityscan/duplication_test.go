@@ -49,7 +49,7 @@ func withFiller(tag string, lines []string) []string {
 // source document. Both are part of the definition, so an edit to either leaves
 // a number that is no longer the property.
 func TestDuplicationCapIsV17(t *testing.T) {
-	const source = "SIG/TUViT Evaluation Criteria Trusted Product Maintainability, " +
+	const source = "SIG/TUV NORD CERT Evaluation Criteria Trusted Product Maintainability, " +
 		"Guidance for Producers, v17.0 (2025-03-12), section 3.2"
 
 	if duplicationCapPct != 5.6 {

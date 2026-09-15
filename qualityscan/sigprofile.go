@@ -33,7 +33,12 @@ const (
 	// SIGModel is the source of record for every threshold in this file. Quoted
 	// in the report so a reader can check the numbers against the document
 	// rather than trusting the code.
-	SIGModel = "SIG/TUViT Evaluation Criteria Trusted Product Maintainability"
+	// The issuing body is TUV NORD CERT, not TUViT. Same certification and the
+	// same document; SIG rebranded the criteria without reissuing them, so the
+	// v17.0 title page below reads "SIG/TUV NORD CERT" while older copies of
+	// the identical document read "SIG/TUViT". Anything citing the old name is
+	// citing this same edition.
+	SIGModel = "SIG/TUV NORD CERT Evaluation Criteria Trusted Product Maintainability"
 	// SIGModelVersion is the edition these caps come from.
 	SIGModelVersion = "v17.0 (2025-03-12)"
 	// SIGModelChecked is when a person last confirmed that edition is still
@@ -43,11 +48,17 @@ const (
 	// what the metric means.
 	//
 	// Last check: the public Guidance for Producers PDF still carried
-	// "Version 17.0 (March 12, 2025)" and every threshold here matched it. SIG's
-	// own 2026 quality model (2026-05-01) removed the Volume property and moved
-	// property aggregation to a power mean, neither of which touches a cap in
-	// this file.
-	SIGModelChecked = "2026-08-28"
+	// "Version 17.0 (March 12, 2025)", and every threshold in this file was
+	// read back out of it one at a time: duplication 5.6%, unit size
+	// 47.1/23.1/8.3, unit complexity 20.2/7.3/1.1, unit interfacing
+	// 15.0/3.3/0.9, module coupling 10.0/5.6/1.9, component independence 93.7%,
+	// component entanglement 0.077, volume 3.9 person-years. Its table of
+	// contents lists the eight properties this tool measures and no others.
+	//
+	// SIG's own 2026 quality model (2026-05-01) removed the Volume property and
+	// moved property aggregation to a power mean, neither of which touches a cap
+	// in this file.
+	SIGModelChecked = "2026-09-15"
 	// SIGStarTarget is the certification level the caps below are for. The
 	// model publishes a cap per star level; this targets 4.
 	//

@@ -57,7 +57,7 @@ func tail(t *testing.T, p PropertyProfile, category string) TailShare {
 // right, and the conclusion is silently wrong. So they are asserted literally
 // here rather than only being read from sigProperties.
 func TestSIGCapsAreV17(t *testing.T) {
-	const source = "SIG/TUViT Evaluation Criteria Trusted Product Maintainability, " +
+	const source = "SIG/TUV NORD CERT Evaluation Criteria Trusted Product Maintainability, " +
 		"Guidance for Producers, v17.0 (2025-03-12)"
 
 	type wantTail struct {

@@ -19,7 +19,7 @@ func modulesByFile(mods []Module) map[string]Module {
 // document, for the same reason TestSIGCapsAreV17 does: a cap edited by accident
 // leaves a report that still renders and is silently wrong.
 func TestModuleCouplingCapsAreV17(t *testing.T) {
-	const source = "SIG/TUViT Evaluation Criteria Trusted Product Maintainability, " +
+	const source = "SIG/TUV NORD CERT Evaluation Criteria Trusted Product Maintainability, " +
 		"Guidance for Producers, v17.0 (2025-03-12), section 3.6"
 
 	props := moduleProperties(defaultModuleCouplingCounts)
