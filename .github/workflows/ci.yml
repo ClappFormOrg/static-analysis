@@ -26,7 +26,11 @@ jobs:
     name: qualityscan
     runs-on: ubuntu-latest
     steps:
+      # Full history: the delta-maintainability step below needs the merge base,
+      # and the default shallow fetch cannot reach it.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7
         with:
           go-version-file: go.mod
@@ -67,6 +71,23 @@ jobs:
       # the tool. It is here so the findings arrive on the PR that adds them.
       - name: Self-scan
         run: go run ./qualityscan -root . -prefix static-analysis -format text
+
+      # deltagate over this pull request's own diff, which is the one input that
+      # cannot be faked in a fixture: two real revisions of a real tree. Advisory
+      # for the same reason the self-scan is, and it writes to the run summary
+      # rather than the log because the score is for a reader, not a grep.
+      - name: Delta maintainability
+        if: github.event_name == 'pull_request'
+        run: |
+          base="$(git merge-base "origin/$GITHUB_BASE_REF" HEAD)"
+          git worktree add "$RUNNER_TEMP/base" "$base"
+          go run ./qualityscan -root "$RUNNER_TEMP/base" -format sigunits -out "$RUNNER_TEMP/before.csv"
+          go run ./qualityscan -root . -format sigunits -out "$RUNNER_TEMP/after.csv"
+          go run ./qualityscan/cmd/deltagate \
+            -before "$RUNNER_TEMP/before.csv" \
+            -after "$RUNNER_TEMP/after.csv" \
+            -rev "$(git rev-parse --short "$base")..HEAD" \
+            -format markdown | tee -a "$GITHUB_STEP_SUMMARY"
 
   node:
     name: dupescan

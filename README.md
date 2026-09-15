@@ -4,7 +4,7 @@ Two repo-quality scanners, neither part of any shipped product.
 
 | Tool | Language | What it answers |
 | --- | --- | --- |
-| [`qualityscan`](qualityscan/) | Go | Maintainability over a Go module: function size, parameter count, cognitive complexity, dependency volume and span, directory reference cycles, duplication, hardcoded URLs and paths, plus the SIG maintainability profile. Ships four gate commands beside it. |
+| [`qualityscan`](qualityscan/) | Go | Maintainability over a Go module: function size, parameter count, cognitive complexity, dependency volume and span, directory reference cycles, duplication, hardcoded URLs and paths, plus the SIG maintainability profile. Ships five gate commands beside it, one of which scores a change rather than the tree. |
 | [`dupescan`](dupescan/) | Node | One concept **declared twice** across files, over TypeScript and Go: a symbol exported by two modules, one string value behind two constants, one shape restated elsewhere. |
 
 Both are stdlib-only and read their input as source text rather than building it,
@@ -21,11 +21,12 @@ they are named below.
 
 ### The Go commands
 
-Five binaries, installed and pinned the way `golangci-lint` is:
+Six binaries, installed and pinned the way `golangci-lint` is:
 
 ```
 go install github.com/ClappFormOrg/static-analysis/qualityscan@v0.1.0
 go install github.com/ClappFormOrg/static-analysis/qualityscan/cmd/covergate@v0.1.0
+go install github.com/ClappFormOrg/static-analysis/qualityscan/cmd/deltagate@v0.1.0
 go install github.com/ClappFormOrg/static-analysis/qualityscan/cmd/ratchetpatch@v0.1.0
 go install github.com/ClappFormOrg/static-analysis/qualityscan/cmd/toolgate@v0.1.0
 go install github.com/ClappFormOrg/static-analysis/qualityscan/cmd/crosscheck@v0.1.0
@@ -37,7 +38,7 @@ in the build and again in a workflow drifts in two directions. Hold it in a
 single file the way `toolgate` expects a linter pin to be held, and read it from
 there everywhere.
 
-A module rather than an image, deliberately. Three of the five commands cannot
+A module rather than an image, deliberately. Three of the six commands cannot
 work from inside a container: `ratchetpatch` shells out to `git diff` against a
 merge-base and needs real history, `toolgate` interrogates `golangci-lint`,
 `actionlint` and `govulncheck` on the host `PATH` and would otherwise report the
@@ -63,7 +64,7 @@ copy cannot drift from the tag.
 ## Releases
 
 Tags are plain `vX.Y.Z` off `main`; the module is at the repository root, so a
-consumer pins one version for all five commands and the script.
+consumer pins one version for all six commands and the script.
 
 A release that moves a default band, adds a rule, or changes what a rule measures
 is a change to what every consumer's gate reports, whatever the version number

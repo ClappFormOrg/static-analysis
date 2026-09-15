@@ -6,8 +6,8 @@
 #
 # WHAT IS MEASURED
 #
-# `go test ./...` across the whole module -- the scanner package, the four
-# commands under cmd/, and internal/gomarker.
+# `go test ./...` across the whole module -- the scanner package, the five
+# commands under cmd/, and the two packages under internal/.
 #
 # QUALITYSCAN_CONFIG_DIR is deliberately NOT set for this measurement. Five tests
 # validate a consuming repository's config files and skip when nothing points them
@@ -24,12 +24,17 @@
 # WHERE THE NUMBER CAME FROM
 #
 # 88.98% measured on the extraction commit, 2,793 of 3,139 statements, with
-# QUALITYSCAN_CONFIG_DIR unset. The floor stays at 88.9, where it was set when the
-# same suite read 89.10% with a config dir pointing at one: the difference is the
-# five skipped config tests plus three checks that read a consuming repository's
-# pin files by relative path and could not follow the tool out of it. That leaves
-# room for 2 more uncovered statements, which is tight -- a change that adds an
-# untested branch should expect to add its test in the same commit.
+# QUALITYSCAN_CONFIG_DIR unset. The floor was set at 88.9, where the same suite
+# read 89.10% with a config dir pointing at one: the difference is the five
+# skipped config tests plus three checks that read a consuming repository's pin
+# files by relative path and could not follow the tool out of it.
+#
+# It now reads 89.56%, 3,019 of 3,371 statements, with cmd/deltagate and
+# internal/dmm added. The floor stays at 88.9 rather than following the
+# measurement up. Raising it is a separate decision from adding a command, and
+# ratcheting on the same commit that moves the number makes the two impossible to
+# review apart. There is room for 24 more uncovered statements at the current
+# floor.
 #
 # The per-package figures behind it, and what each still leaves out:
 #
@@ -43,15 +48,18 @@
 #                             a coverage point.
 #   cmd/covergate      97.2%  main(), one provably unreachable defensive branch
 #                             in RaiseTo, and a WriteString error arm.
+#   cmd/deltagate      96.0%  main(), and the WriteString error arms of the three
+#                             report writers.
 #   cmd/toolgate       95.8%  main(), four statements of run + Fprintf + Exit.
 #   cmd/ratchetpatch   93.4%  main(), two break guards for truncated `git -z`
 #                             output git does not emit, and error arms whose
 #                             triggering input git reports as D rather than M.
 #   cmd/crosscheck    100.0%
+#   internal/dmm      100.0%
 #   internal/gomarker 100.0%
 #
 # The residue is almost entirely main() functions: run + Fprintf + os.Exit, in
-# five packages. They are worth about 1.5 points between them and testing them
+# six packages. They are worth about 1.5 points between them and testing them
 # needs either a subprocess re-exec whose counters do not always merge back into
 # the profile, or an injected exit function in production code. Neither buys a
 # behaviour that the run() tests do not already pin.
@@ -59,9 +67,9 @@
 # A MODULE FLOOR IS NOT A PER-PACKAGE FLOOR
 #
 # covergate gates on the module total, so this number cannot by itself stop one
-# package sliding while another climbs. The scanner package is 2,454 of the 3,139
+# package sliding while another climbs. The scanner package is 2,455 of the 3,371
 # statements, so it dominates: cmd/crosscheck could fall from 100% to 0% and the
-# module would still read 85.2%, clearing this floor. If per-package protection
+# module would still read 85.9%, clearing this floor. If per-package protection
 # is wanted later, it is a covergate feature (a floor per package, read from the
 # same file), not something to fake by running the tool six times.
 88.9
