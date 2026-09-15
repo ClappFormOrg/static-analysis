@@ -9,7 +9,7 @@ import (
 // figures a rebuild value is computed from, so an edited row would change a
 // number that looks like it came from the source document.
 func TestVolumeTableIsV17(t *testing.T) {
-	const source = "SIG/TUViT Evaluation Criteria Trusted Product Maintainability, " +
+	const source = "SIG/TUV NORD CERT Evaluation Criteria Trusted Product Maintainability, " +
 		"Guidance for Producers, v17.0 (2025-03-12), section 3.1"
 
 	want := map[string]int{

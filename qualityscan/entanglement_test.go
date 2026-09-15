@@ -9,7 +9,7 @@ import (
 // implementation is checked against the model's own worked examples rather than
 // against a reading of its prose.
 //
-// SIG/TUViT Evaluation Criteria Trusted Product Maintainability, Guidance for
+// SIG/TUV NORD CERT Evaluation Criteria Trusted Product Maintainability, Guidance for
 // Producers, v17.0 (2025-03-12), section 3.7.
 
 func edge(from, to string, weight int) ComponentEdge {

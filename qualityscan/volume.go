@@ -22,7 +22,7 @@ import (
 //
 // SIG's own 2026 quality model (2026-05-01) removed Volume outright, on the
 // grounds that system size is a risk indicator without an action attached to it.
-// The TUViT criteria this tool measures against still carry it, so it is
+// The TUV NORD CERT criteria this tool measures against still carry it, so it is
 // reported; it is reported as a figure rather than as a judgement.
 
 // volumeYears is the person-years a 4-star product may be worth rebuilding.

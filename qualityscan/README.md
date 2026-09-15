@@ -374,8 +374,12 @@ The model bins every unit into four risk categories and caps the share of code
 complexity are a rounding error next to one 900-line unit, and a count ranks the
 forty as forty times worse.
 
-Source of record: **SIG/TUViT Evaluation Criteria Trusted Product
+Source of record: **SIG/TUV NORD CERT Evaluation Criteria Trusted Product
 Maintainability, Guidance for Producers, v17.0 (2025-03-12)**.
+
+SIG rebranded the criteria from TUViT to TUV NORD CERT without reissuing them,
+so an older copy of this same edition carries the old name on its title page.
+Anything citing "SIG/TUViT v17.0" is citing this document.
 
 | Property | Metric | Risk categories | 4-star caps (share of LOC) |
 | --- | --- | --- | --- |
