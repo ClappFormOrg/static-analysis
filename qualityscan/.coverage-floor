@@ -29,16 +29,16 @@
 # skipped config tests plus three checks that read a consuming repository's pin
 # files by relative path and could not follow the tool out of it.
 #
-# It now reads 89.56%, 3,019 of 3,371 statements, with cmd/deltagate and
-# internal/dmm added. The floor stays at 88.9 rather than following the
-# measurement up. Raising it is a separate decision from adding a command, and
-# ratcheting on the same commit that moves the number makes the two impossible to
-# review apart. There is room for 24 more uncovered statements at the current
-# floor.
+# It now reads 89.87%, 3,124 of 3,476 statements, with cmd/deltagate,
+# internal/dmm and eligibility.go added. The floor stays at 88.9 rather than
+# following the measurement up. Raising it is a separate decision from adding a
+# feature, and ratcheting on the same commit that moves the number makes the two
+# impossible to review apart. There is room for 38 more uncovered statements at
+# the current floor.
 #
 # The per-package figures behind it, and what each still leaves out:
 #
-#   qualityscan        86.8%  publish.go's five gh-shelling functions and
+#   qualityscan        87.4%  publish.go's five gh-shelling functions and
 #                             main.go's entry point. Both need the process
 #                             boundary faked, and neither has a seam to fake it
 #                             through -- gh() calls exec.Command inline, and
@@ -67,9 +67,9 @@
 # A MODULE FLOOR IS NOT A PER-PACKAGE FLOOR
 #
 # covergate gates on the module total, so this number cannot by itself stop one
-# package sliding while another climbs. The scanner package is 2,455 of the 3,371
+# package sliding while another climbs. The scanner package is 2,560 of the 3,476
 # statements, so it dominates: cmd/crosscheck could fall from 100% to 0% and the
-# module would still read 85.9%, clearing this floor. If per-package protection
+# module would still read 86.4%, clearing this floor. If per-package protection
 # is wanted later, it is a covergate feature (a floor per package, read from the
 # same file), not something to fake by running the tool six times.
 88.9

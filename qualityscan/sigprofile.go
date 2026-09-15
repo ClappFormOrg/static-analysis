@@ -728,6 +728,10 @@ func WriteSIGProfile(w io.Writer, r SIGReport, base *Snapshot, devs Deviations) 
 	b.WriteString("\n\n")
 	b.WriteString(profilePreamble)
 	writeMovement(b, base, compareSnapshots(base, snapshotOf(r, "", "")))
+	// The standing summary sits above the tables it is derived from. A reader
+	// who wants the verdict should not have to scroll past nine of them to
+	// reach it, and everything it says is re-derivable from what follows.
+	writeStanding(b, BuildStanding(r, devs))
 
 	for _, l := range r.Languages {
 		writeLanguage(b, l, devs)

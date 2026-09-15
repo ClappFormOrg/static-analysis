@@ -408,6 +408,51 @@ The first three are shares of **unit** LOC; module coupling is a share of
 denominators reconcile exactly (module LOC = unit LOC + non-unit LOC) and
 `TestModuleLOCReconcilesWithUnitLOC` holds them that way.
 
+### Where this stands
+
+The report opens with a summary: how many capped measures each language is
+within, whether the product is eligible at four stars, and what the failing
+properties cost to fix.
+
+```
+| Language | Within cap | Over | Eligible at 4 stars |
+|---|---|---|---|
+| Go | 6 of 13 | 7 | no |
+```
+
+**A count, and not a star rating.** The criteria publish one cut-point per
+property, the share allowed at four stars. They publish no rating curve between
+the stars, no mapping from properties onto ISO 25010 sub-characteristics and no
+aggregation across them; SIG holds those in its benchmark. So "3.4 stars" is not
+derivable from anything public, and printing one would be this tool's invention
+under the model's name, which is the move `components.go` already refuses for
+the component boundary and `volume.go` for the rebuild value.
+
+**There is no weighting, because the model defines none.** Eligibility is a
+conjunction: every capped measure within its cap, for every language used. No
+property outranks another, and the worst measure decides. The count restates
+that definition and adds nothing to it.
+
+**Fourteen measures carry a verdict**, not sixteen: nine unit tails, three
+module coupling tails, duplication and component independence. Component
+entanglement and volume are excluded because neither is evaluable here, and a
+measure with no verdict can be neither within a cap nor over one. Anything a
+run did not measure leaves the denominator too and is named underneath, so a
+surface with no component map reads `13 of 13` rather than `13 of 14` with one
+unexplained gap.
+
+**LOC to move per property is the maximum of its tails, never their sum.** The
+tails are nested, so lines taken out of the innermost failing tail leave the
+outer ones at the same time and one figure covers all three. There is no total
+across properties for the mirror-image reason: a 90-line unit at McCabe 30 sits
+in the excess of two properties and one extraction fixes both, so adding them
+would charge that work twice.
+
+A recorded deviation is shown beside the measure it explains and counted
+separately. It does not move the measure into the within-cap column: a
+deviation says why a fail is the intended state, and a summary that folded the
+two together would read as eligible for a product the model does not certify.
+
 Five details are easy to get quietly wrong, so each is pinned by a test:
 
 - **The tails are cumulative and nested.** A 70-line unit counts in all three
