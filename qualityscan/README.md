@@ -13,6 +13,7 @@ that does not compile.
 ```
 go install github.com/ClappFormOrg/static-analysis/qualityscan@latest
 go install github.com/ClappFormOrg/static-analysis/qualityscan/cmd/covergate@latest
+go install github.com/ClappFormOrg/static-analysis/qualityscan/cmd/deltagate@latest
 go install github.com/ClappFormOrg/static-analysis/qualityscan/cmd/ratchetpatch@latest
 go install github.com/ClappFormOrg/static-analysis/qualityscan/cmd/toolgate@latest
 go install github.com/ClappFormOrg/static-analysis/qualityscan/cmd/crosscheck@latest
@@ -44,7 +45,7 @@ repository keeps them in files of its own:
 qualityscan -root . -config qualityscan.json -accepted accepted.json -format text
 ```
 
-## The other four commands
+## The other five commands
 
 `ratchetpatch` narrows a `golangci-lint --new-from-patch --whole-files` run to
 the files a branch changed the *code* of, by emitting the diff with comment-only
@@ -57,6 +58,44 @@ through as "comment only".
 ```
 ratchetpatch -base <merge-base> -dir . -out .ratchet.patch
 ```
+
+`deltagate` changes the question rather than narrowing it. Everything else here
+scores where the code stands; this scores what the change did. It reads the unit
+inventory at two revisions, bins every unit as low-risk or not on the SIG low
+category's own boundary, and reports the share of the moved lines that went the
+right way, per language and per property.
+
+```
+qualityscan -root . -format sigunits -out before.csv   # at the merge base
+qualityscan -root . -format sigunits -out after.csv    # at HEAD
+deltagate -before before.csv -after after.csv -floor 0.7 -gate
+```
+
+Both inputs are `-format sigunits` output, the same CSV `crosscheck` reads, so a
+language handed to the scanner through `-units` is scored here with no further
+plumbing. Taking two whole inventories rather than a diff is what keeps it that
+cheap: a file nobody touched has the same risk profile on both sides and drops
+out of the ratio, so there is no diff to parse and no second definition of
+"changed" to hold in step with the scan boundary.
+
+The model is Delta Maintainability (di Biase, Rastogi, Bruntink and van Deursen,
+TechDebt 2019). Its low-risk boundaries are 15 lines, McCabe 5 and 2 parameters,
+which are the SIG low category's upper bounds rather than a second opinion;
+`TestDMMLowRiskAlignsWithSIGLowCategory` fails if the two ever disagree.
+
+Three behaviours to understand before gating on it:
+
+- **A property the change never touched has no score** and reports as such, not
+  as 0.00 or 1.00. Both numbers are wrong at a gate: one fails a change that did
+  no harm, the other passes one nobody measured.
+- **Removing low-risk code counts against the score.** That is the model's own
+  reading, and it is deliberate: deleting a clean unit is a loss of clean code,
+  and a model that rewarded deletion would rank `rm -rf` as the best possible
+  commit. A branch whose job is to delete a healthy subsystem scores low for an
+  honest reason, and the LOC figures beside the score are what say so.
+- **A rename reads as a deletion and an addition**, which books equal good and
+  bad and pulls the score towards 0.50. Nothing detects one, so the added and
+  removed file counts are printed next to the score for a reader to recognise it.
 
 `covergate` makes a coverage floor expressible on a module that carries
 generated code. Generated output sits at 0% and can be a large share of a
